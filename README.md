@@ -14,30 +14,38 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 
 ## Install
 
+1. Clone and run setup (installs `terminal-notifier` and copies scripts to `~/.claude/`):
+
 ```bash
 git clone https://github.com/abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
-bash setup.sh
+make install
 ```
 
-Then enable the plugin in Claude Code:
+2. Add the plugin in Claude Code:
 
 ```
-/plugin install /path/to/claude-code-notify
+/plugin marketplace add abdullahAtPelo/claude-code-notify
+/plugin install claude-code-notify@abdullahAtPelo/claude-code-notify
 ```
 
-Finally:
-1. Open **System Settings → Notifications → terminal-notifier**
-2. Enable notifications and set the style to **Alerts** (if you want them to persist until clicked)
-3. Restart Claude Code
+3. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and set the style to **Alerts** (if you want them to persist until clicked)
+
+4. Restart Claude Code
 
 ## Uninstall
 
-In Claude Code, disable the plugin. Then:
+In Claude Code, remove the plugin:
+
+```
+/plugin uninstall claude-code-notify@abdullahAtPelo/claude-code-notify
+```
+
+Then remove the scripts:
 
 ```bash
 cd claude-code-notify
-bash uninstall.sh
+make uninstall
 ```
 
 ## Configuration
