@@ -17,12 +17,14 @@ if tool:
     else:
         msg=f'Requesting permission to use {tool}'
 else:
-    msg=d.get('last_assistant_message','Done')
-if len(msg)<=100:print(msg)
+    msg=d.get('last_assistant_message','')
+if not msg:print('__SKIP__')
+elif len(msg)<=100:print(msg)
 else:
  t=msg[:100];i=t.rfind(' ')
  print((t[:i] if i>0 else t)+'...')
 " 2>/dev/null || echo "Done")
+  [ "$message" = "__SKIP__" ] && exit 0
   cwd=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cwd','').split('/')[-1])" 2>/dev/null)
   session=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('session_id','default'))" 2>/dev/null)
 fi
