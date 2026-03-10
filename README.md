@@ -86,6 +86,26 @@ If you prefer to set it up manually:
    }
    ```
 
+## Configuration
+
+After installing, a config file is created at `~/.claude/notify-config.json`:
+
+```json
+{
+  "sound": "Glass",
+  "sound_enabled": true,
+  "only_when_unfocused": false
+}
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `sound` | `"Glass"` | macOS system sound name (e.g. `"Ping"`, `"Purr"`, `"Hero"`, `"Submarine"`) |
+| `sound_enabled` | `true` | Set to `false` to disable sound entirely |
+| `only_when_unfocused` | `false` | Set to `true` to only notify when the terminal is not in the foreground |
+
+Changes take effect immediately — no restart needed.
+
 ## How it works
 
 Three hooks are registered:

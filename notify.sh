@@ -1,6 +1,21 @@
 #!/bin/bash
 input=$(cat)
 
+# Load config (defaults if missing)
+CONFIG_FILE="$HOME/.claude/notify-config.json"
+sound="Glass"
+sound_enabled=true
+only_when_unfocused=false
+if [ -f "$CONFIG_FILE" ]; then
+  eval "$(/usr/bin/python3 -c "
+import json
+with open('$CONFIG_FILE') as f: c=json.load(f)
+print(f'sound={c.get(\"sound\",\"Glass\")}')
+print(f'sound_enabled={str(c.get(\"sound_enabled\",True)).lower()}')
+print(f'only_when_unfocused={str(c.get(\"only_when_unfocused\",False)).lower()}')
+" 2>/dev/null)"
+fi
+
 # Extract message and working directory from the hook payload
 message="Done"
 cwd=""
@@ -49,5 +64,16 @@ if [ -z "$bundle" ]; then
   done
 fi
 
-terminal-notifier -title "$title" -message "$message" -sound Glass -group "${session:-default}" ${bundle:+-activate "$bundle"}
-afplay /System/Library/Sounds/Glass.aiff &
+# Skip if only_when_unfocused is set and terminal is focused
+if [ "$only_when_unfocused" = "true" ] && [ -n "$bundle" ]; then
+  frontmost=$(osascript -e "tell application \"System Events\" to get bundle identifier of first application process whose frontmost is true" 2>/dev/null)
+  [ "$frontmost" = "$bundle" ] && exit 0
+fi
+
+sound_flag=""
+[ "$sound_enabled" = "true" ] && sound_flag="-sound $sound"
+terminal-notifier -title "$title" -message "$message" $sound_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
+if [ "$sound_enabled" = "true" ]; then
+  sound_file="/System/Library/Sounds/${sound}.aiff"
+  [ -f "$sound_file" ] && afplay "$sound_file" &
+fi

@@ -23,6 +23,21 @@ cp "$SCRIPT_DIR/notify.sh" "$NOTIFY_SCRIPT"
 chmod +x "$NOTIFY_SCRIPT"
 echo "==> Installed notify script to $NOTIFY_SCRIPT"
 
+# Create default config if it doesn't exist
+CONFIG_FILE="$HOME/.claude/notify-config.json"
+if [ ! -f "$CONFIG_FILE" ]; then
+  cat > "$CONFIG_FILE" <<'CONF'
+{
+  "sound": "Glass",
+  "sound_enabled": true,
+  "only_when_unfocused": false
+}
+CONF
+  echo "==> Created default config at $CONFIG_FILE"
+else
+  echo "==> Config already exists at $CONFIG_FILE"
+fi
+
 # Add hook to settings.json
 HOOK_COMMAND="bash $NOTIFY_SCRIPT"
 if [ -f "$SETTINGS_FILE" ]; then
