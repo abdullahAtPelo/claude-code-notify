@@ -1,13 +1,23 @@
 #!/bin/bash
 input=$(cat)
 
-# Extract last message and working directory for a personal notification
+# Extract message and working directory from the hook payload
 message="Done"
 cwd=""
 if [ -n "$input" ]; then
   message=$(echo "$input" | /usr/bin/python3 -c "
 import sys,json
-msg=json.load(sys.stdin).get('last_assistant_message','Done')
+d=json.load(sys.stdin)
+# PermissionRequest hook has tool_name field
+tool=d.get('tool_name','')
+if tool:
+    desc=d.get('tool_input',{}).get('description','') or d.get('tool_input',{}).get('command','')
+    if desc:
+        msg=f'Requesting permission to {tool}: {desc}'
+    else:
+        msg=f'Requesting permission to use {tool}'
+else:
+    msg=d.get('last_assistant_message','Done')
 if len(msg)<=100:print(msg)
 else:
  t=msg[:100];i=t.rfind(' ')
