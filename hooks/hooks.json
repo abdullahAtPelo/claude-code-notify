@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/notify-clear.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",

@@ -17,8 +17,9 @@ mkdir -p "$HOME/.claude"
 # Copy notify script
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cp "$SCRIPT_DIR/notify.sh" "$HOME/.claude/notify.sh"
-chmod +x "$HOME/.claude/notify.sh"
-echo "==> Installed notify script to ~/.claude/notify.sh"
+cp "$SCRIPT_DIR/notify-clear.sh" "$HOME/.claude/notify-clear.sh"
+chmod +x "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh"
+echo "==> Installed notify scripts to ~/.claude/"
 
 # Create default config if it doesn't exist
 CONFIG_FILE="$HOME/.claude/notify-config.json"
