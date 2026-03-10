@@ -60,6 +60,17 @@ If you prefer to set it up manually:
            ]
          }
        ],
+       "PermissionRequest": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "bash ~/.claude/notify.sh"
+             }
+           ]
+         }
+       ],
        "Notification": [
          {
            "matcher": "",
@@ -77,8 +88,9 @@ If you prefer to set it up manually:
 
 ## How it works
 
-Two hooks are registered:
+Three hooks are registered:
 - **Stop** — fires every time Claude finishes a response (works whether terminal is focused or not)
+- **PermissionRequest** — fires when Claude needs you to approve a tool call (focused or not)
 - **Notification** — fires when Claude is waiting for input and the terminal is unfocused
 
 The script:

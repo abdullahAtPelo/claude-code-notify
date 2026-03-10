@@ -41,7 +41,7 @@ hook_entry = {
 hooks = settings.setdefault('hooks', {})
 changed = False
 
-for event in ['Stop', 'Notification']:
+for event in ['Stop', 'PermissionRequest', 'Notification']:
     event_hooks = hooks.setdefault(event, [])
     already_exists = any(
         any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
@@ -69,6 +69,17 @@ else
 {
   "hooks": {
     "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOOK_COMMAND"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
       {
         "matcher": "",
         "hooks": [

@@ -17,7 +17,7 @@ with open('$SETTINGS_FILE', 'r') as f:
 
 hooks = settings.get('hooks', {})
 
-for event in ['Stop', 'Notification']:
+for event in ['Stop', 'PermissionRequest', 'Notification']:
     event_hooks = hooks.get(event, [])
     event_hooks = [
         entry for entry in event_hooks
