@@ -16,17 +16,17 @@ with open('$SETTINGS_FILE', 'r') as f:
     settings = json.load(f)
 
 hooks = settings.get('hooks', {})
-stop_hooks = hooks.get('Stop', [])
 
-stop_hooks = [
-    entry for entry in stop_hooks
-    if not any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
-]
-
-if stop_hooks:
-    hooks['Stop'] = stop_hooks
-else:
-    hooks.pop('Stop', None)
+for event in ['Stop', 'Notification']:
+    event_hooks = hooks.get(event, [])
+    event_hooks = [
+        entry for entry in event_hooks
+        if not any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
+    ]
+    if event_hooks:
+        hooks[event] = event_hooks
+    else:
+        hooks.pop(event, None)
 
 if not hooks:
     settings.pop('hooks', None)

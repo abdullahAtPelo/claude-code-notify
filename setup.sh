@@ -39,22 +39,25 @@ hook_entry = {
 }
 
 hooks = settings.setdefault('hooks', {})
-stop_hooks = hooks.setdefault('Stop', [])
+changed = False
 
-# Check if hook already exists
-already_exists = any(
-    any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
-    for entry in stop_hooks
-)
+for event in ['Stop', 'Notification']:
+    event_hooks = hooks.setdefault(event, [])
+    already_exists = any(
+        any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
+        for entry in event_hooks
+    )
+    if not already_exists:
+        event_hooks.append(hook_entry)
+        changed = True
+        print(f'==> Added {event} hook to $SETTINGS_FILE')
+    else:
+        print(f'==> {event} hook already configured in $SETTINGS_FILE')
 
-if not already_exists:
-    stop_hooks.append(hook_entry)
+if changed:
     with open('$SETTINGS_FILE', 'w') as f:
         json.dump(settings, f, indent=2)
         f.write('\n')
-    print('==> Added Stop hook to $SETTINGS_FILE')
-else:
-    print('==> Hook already configured in $SETTINGS_FILE')
 " || {
   echo "ERROR: Failed to update settings.json. You may need to add the hook manually."
   echo "See README.md for manual setup instructions."
@@ -75,11 +78,22 @@ else
           }
         ]
       }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOOK_COMMAND"
+          }
+        ]
+      }
     ]
   }
 }
 EOF
-  echo "==> Created $SETTINGS_FILE with Stop hook"
+  echo "==> Created $SETTINGS_FILE with Stop and Notification hooks"
 fi
 
 echo ""

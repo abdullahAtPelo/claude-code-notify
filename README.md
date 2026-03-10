@@ -13,7 +13,7 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 ## Install
 
 ```bash
-git clone https://github.com/pelotoncycle/claude-code-notify.git
+git clone https://github.com/abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
 bash setup.sh
 ```
@@ -45,11 +45,22 @@ If you prefer to set it up manually:
    chmod +x ~/.claude/notify.sh
    ```
 
-3. Add the hook to `~/.claude/settings.json`:
+3. Add the hooks to `~/.claude/settings.json`:
    ```json
    {
      "hooks": {
        "Stop": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "bash ~/.claude/notify.sh"
+             }
+           ]
+         }
+       ],
+       "Notification": [
          {
            "matcher": "",
            "hooks": [
@@ -66,7 +77,11 @@ If you prefer to set it up manually:
 
 ## How it works
 
-The `Stop` hook fires every time Claude finishes a response. The script:
+Two hooks are registered:
+- **Stop** — fires every time Claude finishes a response (works whether terminal is focused or not)
+- **Notification** — fires when Claude is waiting for input and the terminal is unfocused
+
+The script:
 
 1. Reads the hook payload (JSON via stdin) to get the last message, working directory, and session ID
 2. Detects which terminal app you're using via `$TERM_PROGRAM`, or by walking the process tree for terminals that don't set it (like JetBrains)
