@@ -44,8 +44,9 @@ fi
 
 echo ""
 echo "Done! Next steps:"
-echo "  1. Enable the plugin in Claude Code:"
-echo "     /plugin install $SCRIPT_DIR"
+echo "  1. Add the plugin in Claude Code:"
+echo "     /plugin marketplace add abdullahAtPelo/claude-code-notify"
+echo "     /plugin install claude-code-notify@abdullahAtPelo/claude-code-notify"
 echo "  2. Enable notifications for terminal-notifier in:"
 echo "     System Settings → Notifications → terminal-notifier"
 echo "  3. Set the alert style to 'Alerts' if you want notifications to persist"
