@@ -29,8 +29,14 @@ if [ ! -f "$CONFIG_FILE" ]; then
   cat > "$CONFIG_FILE" <<'CONF'
 {
   "sound": "Glass",
-  "sound_enabled": true,
-  "only_when_unfocused": false
+  "focused": {
+    "notification": false,
+    "sound": false
+  },
+  "unfocused": {
+    "notification": true,
+    "sound": true
+  }
 }
 CONF
   echo "==> Created default config at $CONFIG_FILE"
@@ -38,32 +44,54 @@ else
   echo "==> Config already exists at $CONFIG_FILE"
 fi
 
-# Add hook to settings.json
+# Add hooks to settings.json
 HOOK_COMMAND="bash $NOTIFY_SCRIPT"
 if [ -f "$SETTINGS_FILE" ]; then
-  # Merge hook into existing settings
+  # Merge hooks into existing settings, cleaning up old hook formats
   /usr/bin/python3 -c "
 import json, sys
 
 with open('$SETTINGS_FILE', 'r') as f:
     settings = json.load(f)
 
-hook_entry = {
-    'matcher': '',
-    'hooks': [{'type': 'command', 'command': '$HOOK_COMMAND'}]
-}
-
 hooks = settings.setdefault('hooks', {})
 changed = False
 
-for event in ['Stop', 'PermissionRequest', 'Notification']:
+# Clean up old Notification hooks and old-style commands with event arguments
+old_commands = [
+    '$HOOK_COMMAND',
+    '$HOOK_COMMAND Stop',
+    '$HOOK_COMMAND PermissionRequest',
+    '$HOOK_COMMAND Notification',
+]
+
+# Remove Notification hook entirely
+if 'Notification' in hooks:
+    for entry in hooks['Notification']:
+        entry['hooks'] = [h for h in entry.get('hooks', []) if h.get('command') not in old_commands]
+    hooks['Notification'] = [e for e in hooks['Notification'] if e.get('hooks')]
+    if not hooks['Notification']:
+        del hooks['Notification']
+        changed = True
+        print('==> Removed Notification hook from $SETTINGS_FILE')
+
+for event in ['Stop', 'PermissionRequest']:
     event_hooks = hooks.setdefault(event, [])
+
+    # Remove old-style hooks
+    for entry in event_hooks:
+        entry['hooks'] = [h for h in entry.get('hooks', []) if h.get('command') not in old_commands]
+    event_hooks[:] = [e for e in event_hooks if e.get('hooks')]
+
     already_exists = any(
         any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
         for entry in event_hooks
     )
     if not already_exists:
-        event_hooks.append(hook_entry)
+        event_hooks.append({
+            'matcher': '',
+            'hooks': [{'type': 'command', 'command': '$HOOK_COMMAND'}]
+        })
         changed = True
         print(f'==> Added {event} hook to $SETTINGS_FILE')
     else:
@@ -79,7 +107,7 @@ if changed:
   exit 1
 }
 else
-  # Create new settings file with just the hook
+  # Create new settings file with hooks
   cat > "$SETTINGS_FILE" <<EOF
 {
   "hooks": {
@@ -104,22 +132,11 @@ else
           }
         ]
       }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOOK_COMMAND"
-          }
-        ]
-      }
     ]
   }
 }
 EOF
-  echo "==> Created $SETTINGS_FILE with Stop and Notification hooks"
+  echo "==> Created $SETTINGS_FILE with hooks"
 fi
 
 echo ""

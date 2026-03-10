@@ -4,11 +4,12 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 
 ## Features
 
+- **Smart focus detection** — only notifies when you're not looking at the Claude session, works across terminals and IDEs
 - **Click to focus** — clicking the notification brings you to the exact terminal Claude is running in
 - **Works with any terminal** — Ghostty, iTerm2, Terminal.app, Warp, JetBrains IDEs, and more
-- **Smart messages** — notifications show a summary of Claude's last response
-- **Multi-agent friendly** — each Claude session replaces its own notification, so they don't pile up
-- **Sound alert** — plays a Glass sound so you know Claude is done
+- **Smart messages** — notifications show a summary of Claude's last response or permission request details
+- **Multi-session friendly** — each Claude session is tracked independently, so notifications from one session don't get suppressed when you're looking at another
+- **Sound alert** — plays a configurable system sound
 
 ## Install
 
@@ -70,17 +71,6 @@ If you prefer to set it up manually:
              }
            ]
          }
-       ],
-       "Notification": [
-         {
-           "matcher": "",
-           "hooks": [
-             {
-               "type": "command",
-               "command": "bash ~/.claude/notify.sh"
-             }
-           ]
-         }
        ]
      }
    }
@@ -93,32 +83,43 @@ After installing, a config file is created at `~/.claude/notify-config.json`:
 ```json
 {
   "sound": "Glass",
-  "sound_enabled": true,
-  "only_when_unfocused": false
+  "focused": {
+    "notification": false,
+    "sound": false
+  },
+  "unfocused": {
+    "notification": true,
+    "sound": true
+  }
 }
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `sound` | `"Glass"` | macOS system sound name (e.g. `"Ping"`, `"Purr"`, `"Hero"`, `"Submarine"`) |
-| `sound_enabled` | `true` | Set to `false` to disable sound entirely |
-| `only_when_unfocused` | `false` | Set to `true` to only notify when the terminal is not in the foreground |
+| `sound` | `"Glass"` | macOS system sound to play (see list below) |
+| `focused.notification` | `false` | Show notifications when you're looking at this Claude session |
+| `focused.sound` | `false` | Play sound when you're looking at this Claude session |
+| `unfocused.notification` | `true` | Show notifications when you're not looking at this Claude session |
+| `unfocused.sound` | `true` | Play sound when you're not looking at this Claude session |
+
+**Available sounds:** Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Submarine, Tink
 
 Changes take effect immediately — no restart needed.
 
 ## How it works
 
-Three hooks are registered:
-- **Stop** — fires every time Claude finishes a response (works whether terminal is focused or not)
-- **PermissionRequest** — fires when Claude needs you to approve a tool call (focused or not)
-- **Notification** — fires when Claude is waiting for input and the terminal is unfocused
+Two hooks are registered:
+- **Stop** — fires instantly when Claude finishes a response
+- **PermissionRequest** — fires instantly when Claude needs you to approve a tool call
 
 The script:
 
 1. Reads the hook payload (JSON via stdin) to get the last message, working directory, and session ID
-2. Detects which terminal app you're using via `$TERM_PROGRAM`, or by walking the process tree for terminals that don't set it (like JetBrains)
-3. Sends a notification via `terminal-notifier` with click-to-activate pointing at your terminal
-4. Plays a Glass sound via `afplay`
+2. Checks if you're looking at this specific Claude session using macOS accessibility APIs — reads the focused UI element's text content to detect if "Claude Code" and the project directory are visible on screen
+3. If you're already looking at this session, skips the notification
+4. Otherwise, sends a notification via `terminal-notifier` with click-to-activate pointing at your terminal and plays a sound via `afplay`
+
+This focus detection works universally across standalone terminals (Ghostty, iTerm2, Terminal.app) and IDE-embedded terminals (JetBrains GoLand, IntelliJ, etc.) without any terminal-specific code.
 
 ## Requirements
 

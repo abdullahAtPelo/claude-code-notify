@@ -4,26 +4,32 @@ input=$(cat)
 # Load config (defaults if missing)
 CONFIG_FILE="$HOME/.claude/notify-config.json"
 sound="Glass"
-sound_enabled=true
-only_when_unfocused=false
+focused_notification=false
+focused_sound=false
+unfocused_notification=true
+unfocused_sound=true
 if [ -f "$CONFIG_FILE" ]; then
   eval "$(/usr/bin/python3 -c "
 import json
 with open('$CONFIG_FILE') as f: c=json.load(f)
+f=c.get('focused',{})
+u=c.get('unfocused',{})
 print(f'sound={c.get(\"sound\",\"Glass\")}')
-print(f'sound_enabled={str(c.get(\"sound_enabled\",True)).lower()}')
-print(f'only_when_unfocused={str(c.get(\"only_when_unfocused\",False)).lower()}')
+print(f'focused_notification={str(f.get(\"notification\",False)).lower()}')
+print(f'focused_sound={str(f.get(\"sound\",False)).lower()}')
+print(f'unfocused_notification={str(u.get(\"notification\",True)).lower()}')
+print(f'unfocused_sound={str(u.get(\"sound\",True)).lower()}')
 " 2>/dev/null)"
 fi
 
-# Extract message and working directory from the hook payload
-message="Done"
+# Extract message, cwd, and session from the hook payload
+message=""
 cwd=""
+session=""
 if [ -n "$input" ]; then
   message=$(echo "$input" | /usr/bin/python3 -c "
 import sys,json
 d=json.load(sys.stdin)
-# PermissionRequest hook has tool_name field
 tool=d.get('tool_name','')
 if tool:
     desc=d.get('tool_input',{}).get('description','') or d.get('tool_input',{}).get('command','')
@@ -33,16 +39,48 @@ if tool:
         msg=f'Requesting permission to use {tool}'
 else:
     msg=d.get('last_assistant_message','')
-if not msg:print('__SKIP__')
-elif len(msg)<=100:print(msg)
+if not msg:sys.exit(1)
+if len(msg)<=100:print(msg)
 else:
  t=msg[:100];i=t.rfind(' ')
  print((t[:i] if i>0 else t)+'...')
-" 2>/dev/null || echo "Done")
-  [ "$message" = "__SKIP__" ] && exit 0
+" 2>/dev/null) || exit 0
   cwd=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cwd','').split('/')[-1])" 2>/dev/null)
   session=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('session_id','default'))" 2>/dev/null)
 fi
+[ -z "$message" ] && exit 0
+
+# Focus detection: check if the user is looking at THIS Claude session
+# Reads the focused UI element's text content — works across all terminals and IDEs
+is_focused=false
+ax_value=$(osascript -e '
+tell application "System Events"
+    try
+        set focusedEl to value of attribute "AXFocusedUIElement" of (first application process whose frontmost is true)
+        set elVal to value of attribute "AXValue" of focusedEl
+        if length of elVal > 500 then
+            set elVal to text 1 thru 500 of elVal
+        end if
+        return elVal
+    on error
+        return ""
+    end try
+end tell' 2>/dev/null)
+if echo "$ax_value" | grep -q "Claude Code"; then
+  if [ -n "$cwd" ] && echo "$ax_value" | grep -q "$cwd"; then
+    is_focused=true
+  fi
+fi
+
+# Apply focused/unfocused config
+if [ "$is_focused" = "true" ]; then
+  [ "$focused_notification" = "false" ] && exit 0
+  notify_sound="$focused_sound"
+else
+  [ "$unfocused_notification" = "false" ] && exit 0
+  notify_sound="$unfocused_sound"
+fi
+
 title="Claude Code${cwd:+ — $cwd}"
 
 bundle=""
@@ -64,16 +102,10 @@ if [ -z "$bundle" ]; then
   done
 fi
 
-# Skip if only_when_unfocused is set and terminal is focused
-if [ "$only_when_unfocused" = "true" ] && [ -n "$bundle" ]; then
-  frontmost=$(osascript -e "tell application \"System Events\" to get bundle identifier of first application process whose frontmost is true" 2>/dev/null)
-  [ "$frontmost" = "$bundle" ] && exit 0
-fi
-
 sound_flag=""
-[ "$sound_enabled" = "true" ] && sound_flag="-sound $sound"
+[ "$notify_sound" = "true" ] && sound_flag="-sound $sound"
 terminal-notifier -title "$title" -message "$message" $sound_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
-if [ "$sound_enabled" = "true" ]; then
+if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &
 fi
