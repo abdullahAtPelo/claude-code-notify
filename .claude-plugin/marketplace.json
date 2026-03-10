@@ -1,5 +1,8 @@
 {
   "name": "abdullahAtPelo/claude-code-notify",
+  "owner": {
+    "name": "Abdullah Bashir"
+  },
   "description": "Native macOS notifications for Claude Code",
   "plugins": [
     {
