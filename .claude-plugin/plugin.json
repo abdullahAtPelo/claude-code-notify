@@ -1,0 +1,10 @@
+{
+  "name": "claude-code-notify",
+  "description": "Native macOS notifications for Claude Code — get notified when Claude finishes or needs permission, with smart focus detection",
+  "version": "1.0.0",
+  "author": {
+    "name": "Abdullah Bashir"
+  },
+  "homepage": "https://github.com/abdullahAtPelo/claude-code-notify",
+  "repository": "https://github.com/abdullahAtPelo/claude-code-notify"
+}

@@ -10,6 +10,7 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 - **Smart messages** — notifications show a summary of Claude's last response or permission request details
 - **Multi-session friendly** — each Claude session is tracked independently, so notifications from one session don't get suppressed when you're looking at another
 - **Sound alert** — plays a configurable system sound
+- **`/notify-config` command** — configure notification settings directly in Claude Code
 
 ## Install
 
@@ -19,66 +20,29 @@ cd claude-code-notify
 bash setup.sh
 ```
 
-Then:
+Then enable the plugin in Claude Code:
+
+```
+/plugin install /path/to/claude-code-notify
+```
+
+Finally:
 1. Open **System Settings → Notifications → terminal-notifier**
 2. Enable notifications and set the style to **Alerts** (if you want them to persist until clicked)
 3. Restart Claude Code
 
 ## Uninstall
 
+In Claude Code, disable the plugin. Then:
+
 ```bash
 cd claude-code-notify
 bash uninstall.sh
 ```
 
-## Manual setup
-
-If you prefer to set it up manually:
-
-1. Install terminal-notifier:
-   ```bash
-   brew install terminal-notifier
-   ```
-
-2. Copy `notify.sh` to `~/.claude/notify.sh` and make it executable:
-   ```bash
-   cp notify.sh ~/.claude/notify.sh
-   chmod +x ~/.claude/notify.sh
-   ```
-
-3. Add the hooks to `~/.claude/settings.json`:
-   ```json
-   {
-     "hooks": {
-       "Stop": [
-         {
-           "matcher": "",
-           "hooks": [
-             {
-               "type": "command",
-               "command": "bash ~/.claude/notify.sh"
-             }
-           ]
-         }
-       ],
-       "PermissionRequest": [
-         {
-           "matcher": "",
-           "hooks": [
-             {
-               "type": "command",
-               "command": "bash ~/.claude/notify.sh"
-             }
-           ]
-         }
-       ]
-     }
-   }
-   ```
-
 ## Configuration
 
-After installing, a config file is created at `~/.claude/notify-config.json`:
+A config file is created at `~/.claude/notify-config.json`:
 
 ```json
 {
@@ -106,9 +70,13 @@ After installing, a config file is created at `~/.claude/notify-config.json`:
 
 Changes take effect immediately — no restart needed.
 
+### Using `/notify-config`
+
+You can also configure notifications by typing `/claude-code-notify:notify-config` in Claude Code. Claude will show your current settings and walk you through changing them.
+
 ## How it works
 
-Two hooks are registered:
+The plugin registers two hooks:
 - **Stop** — fires instantly when Claude finishes a response
 - **PermissionRequest** — fires instantly when Claude needs you to approve a tool call
 
@@ -116,8 +84,8 @@ The script:
 
 1. Reads the hook payload (JSON via stdin) to get the last message, working directory, and session ID
 2. Checks if you're looking at this specific Claude session using macOS accessibility APIs — reads the focused UI element's text content to detect if "Claude Code" and the project directory are visible on screen
-3. If you're already looking at this session, skips the notification
-4. Otherwise, sends a notification via `terminal-notifier` with click-to-activate pointing at your terminal and plays a sound via `afplay`
+3. If you're already looking at this session, applies the `focused` config. Otherwise, applies the `unfocused` config
+4. Sends a notification via `terminal-notifier` with click-to-activate pointing at your terminal and optionally plays a sound via `afplay`
 
 This focus detection works universally across standalone terminals (Ghostty, iTerm2, Terminal.app) and IDE-embedded terminals (JetBrains GoLand, IntelliJ, etc.) without any terminal-specific code.
 
