@@ -105,8 +105,6 @@ if [ -z "$bundle" ]; then
   done
 fi
 
-sound_flag=""
-[ "$notify_sound" = "true" ] && sound_flag="-sound $sound"
 # Resolve terminal app icon for content image
 content_image=""
 if [ -n "$bundle" ]; then
@@ -147,7 +145,7 @@ SCRIPT
 elif [ -n "$bundle" ]; then
   activate_flag="-activate $bundle"
 fi
-terminal-notifier -title "$title" -message "$message" $sound_flag ${content_image:+-contentImage "$content_image"} -group "${session:-default}" $activate_flag
+terminal-notifier -title "$title" -message "$message" ${content_image:+-contentImage "$content_image"} -group "${session:-default}" $activate_flag
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &
