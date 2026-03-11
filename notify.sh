@@ -110,16 +110,20 @@ fi
 sound_flag=""
 [ "$notify_sound" = "true" ] && sound_flag="-sound $sound"
 # Resolve terminal app icon for content image
-icon_flag=""
+content_image=""
 if [ -n "$bundle" ]; then
   app_path=$(mdfind "kMDItemCFBundleIdentifier == '$bundle'" 2>/dev/null | head -1)
   if [ -n "$app_path" ]; then
-    app_icon=$(ls "$app_path/Contents/Resources/"*.icns 2>/dev/null | head -1)
-    [ -n "$app_icon" ] && icon_flag="-contentImage $app_icon"
+    icon_name=$(defaults read "$app_path/Contents/Info.plist" CFBundleIconFile 2>/dev/null)
+    if [ -n "$icon_name" ]; then
+      [[ "$icon_name" != *.icns ]] && icon_name="$icon_name.icns"
+      app_icon="$app_path/Contents/Resources/$icon_name"
+      [ -f "$app_icon" ] && content_image="$app_icon"
+    fi
   fi
 fi
 # Fall back to Claude icon if terminal icon not found
-[ -z "$icon_flag" ] && [ -f "$HOME/.claude/notify-icon.png" ] && icon_flag="-contentImage $HOME/.claude/notify-icon.png"
+[ -z "$content_image" ] && [ -f "$HOME/.claude/notify-icon.png" ] && content_image="$HOME/.claude/notify-icon.png"
 # Build click action: use -execute to raise the correct window by project name
 activate_flag=""
 if [ -n "$bundle" ] && [ -n "$cwd" ]; then
@@ -145,7 +149,7 @@ SCRIPT
 elif [ -n "$bundle" ]; then
   activate_flag="-activate $bundle"
 fi
-terminal-notifier -title "$title" -message "$message" $sound_flag $icon_flag -group "${session:-default}" $activate_flag
+terminal-notifier -title "$title" -message "$message" $sound_flag ${content_image:+-contentImage "$content_image"} -group "${session:-default}" $activate_flag
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &
