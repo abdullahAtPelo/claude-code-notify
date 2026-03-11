@@ -14,34 +14,24 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 
 ## Install
 
-1. Clone and run setup (installs `terminal-notifier` and copies scripts to `~/.claude/`):
-
 ```bash
 git clone https://github.com/abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
 make install
 ```
 
-2. Add the plugin in Claude Code:
+Then:
+1. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and set the style to **Alerts** (if you want them to persist until clicked)
+2. Restart Claude Code
+
+Optionally, add the plugin for the `/notify-config` command:
 
 ```
 /plugin marketplace add abdullahAtPelo/claude-code-notify
 /plugin install claude-code-notify@abdullahAtPelo/claude-code-notify
 ```
 
-3. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and set the style to **Alerts** (if you want them to persist until clicked)
-
-4. Restart Claude Code
-
 ## Uninstall
-
-In Claude Code, remove the plugin:
-
-```
-/plugin uninstall claude-code-notify@abdullahAtPelo/claude-code-notify
-```
-
-Then remove the scripts:
 
 ```bash
 cd claude-code-notify
@@ -84,9 +74,10 @@ You can also configure notifications by typing `/claude-code-notify:notify-confi
 
 ## How it works
 
-The plugin registers two hooks:
-- **Stop** — fires instantly when Claude finishes a response
-- **PermissionRequest** — fires instantly when Claude needs you to approve a tool call
+The installer registers three hooks in `~/.claude/settings.json`:
+- **Stop** — fires when Claude finishes a response
+- **PermissionRequest** — fires when Claude needs you to approve a tool call
+- **UserPromptSubmit** — clears stale notifications when you send a new prompt
 
 The script:
 

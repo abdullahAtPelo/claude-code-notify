@@ -1,30 +1,29 @@
 #!/bin/bash
 set -e
 
-NOTIFY_SCRIPT="$HOME/.claude/notify.sh"
-SETTINGS_FILE="$HOME/.claude/settings.json"
-HOOK_COMMAND="bash $NOTIFY_SCRIPT"
-
 echo "==> Uninstalling claude-code-notify"
 
-# Remove hook from settings.json
+SETTINGS_FILE="$HOME/.claude/settings.json"
+
+# Remove hooks from settings.json
 if [ -f "$SETTINGS_FILE" ]; then
   /usr/bin/python3 -c "
 import json
 
-with open('$SETTINGS_FILE', 'r') as f:
+with open('$SETTINGS_FILE') as f:
     settings = json.load(f)
 
 hooks = settings.get('hooks', {})
+cmds_to_remove = {'bash ~/.claude/notify.sh', 'bash ~/.claude/notify-clear.sh'}
 
-for event in ['Stop', 'PermissionRequest', 'Notification']:
-    event_hooks = hooks.get(event, [])
-    event_hooks = [
-        entry for entry in event_hooks
-        if not any(h.get('command') == '$HOOK_COMMAND' for h in entry.get('hooks', []))
+for event in ['Stop', 'PermissionRequest', 'UserPromptSubmit']:
+    entries = hooks.get(event, [])
+    entries = [
+        entry for entry in entries
+        if not any(h.get('command') in cmds_to_remove for h in entry.get('hooks', []))
     ]
-    if event_hooks:
-        hooks[event] = event_hooks
+    if entries:
+        hooks[event] = entries
     else:
         hooks.pop(event, None)
 
@@ -34,13 +33,11 @@ if not hooks:
 with open('$SETTINGS_FILE', 'w') as f:
     json.dump(settings, f, indent=2)
     f.write('\n')
-" && echo "==> Removed hook from $SETTINGS_FILE"
+" && echo "==> Removed hooks from $SETTINGS_FILE"
 fi
 
-# Remove notify script
-if [ -f "$NOTIFY_SCRIPT" ]; then
-  rm "$NOTIFY_SCRIPT"
-  echo "==> Removed $NOTIFY_SCRIPT"
-fi
+# Remove scripts and config
+rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json"
+echo "==> Removed notify scripts and config"
 
 echo "==> Done. Restart Claude Code for changes to take effect."
