@@ -14,7 +14,7 @@ fi
 # Ensure .claude directory exists
 mkdir -p "$HOME/.claude"
 
-# Copy notify script
+# Copy notify scripts
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cp "$SCRIPT_DIR/notify.sh" "$HOME/.claude/notify.sh"
 cp "$SCRIPT_DIR/notify-clear.sh" "$HOME/.claude/notify-clear.sh"
@@ -28,8 +28,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
 {
   "sound": "Glass",
   "focused": {
-    "notification": false,
-    "sound": false
+    "notification": true,
+    "sound": true
   },
   "unfocused": {
     "notification": true,
@@ -42,12 +42,49 @@ else
   echo "==> Config already exists at $CONFIG_FILE"
 fi
 
+# Add hooks to ~/.claude/settings.json
+SETTINGS_FILE="$HOME/.claude/settings.json"
+/usr/bin/python3 -c "
+import json, os
+
+path = '$SETTINGS_FILE'
+settings = {}
+if os.path.exists(path):
+    with open(path) as f:
+        settings = json.load(f)
+
+hooks = settings.setdefault('hooks', {})
+
+notify_cmd = 'bash ~/.claude/notify.sh'
+clear_cmd = 'bash ~/.claude/notify-clear.sh'
+
+hook_defs = {
+    'Stop': notify_cmd,
+    'PermissionRequest': notify_cmd,
+    'UserPromptSubmit': clear_cmd,
+}
+
+for event, cmd in hook_defs.items():
+    entries = hooks.get(event, [])
+    already = any(
+        any(h.get('command') == cmd for h in entry.get('hooks', []))
+        for entry in entries
+    )
+    if not already:
+        entries.append({
+            'matcher': '',
+            'hooks': [{'type': 'command', 'command': cmd}]
+        })
+        hooks[event] = entries
+
+with open(path, 'w') as f:
+    json.dump(settings, f, indent=2)
+    f.write('\n')
+" && echo "==> Added hooks to $SETTINGS_FILE"
+
 echo ""
 echo "Done! Next steps:"
-echo "  1. Add the plugin in Claude Code:"
-echo "     /plugin marketplace add abdullahAtPelo/claude-code-notify"
-echo "     /plugin install claude-code-notify@abdullahAtPelo/claude-code-notify"
-echo "  2. Enable notifications for terminal-notifier in:"
+echo "  1. Enable notifications for terminal-notifier in:"
 echo "     System Settings → Notifications → terminal-notifier"
-echo "  3. Set the alert style to 'Alerts' if you want notifications to persist"
-echo "  4. Restart Claude Code"
+echo "  2. Set the alert style to 'Alerts' if you want notifications to persist"
+echo "  3. Restart Claude Code"
