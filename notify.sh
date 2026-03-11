@@ -9,17 +9,23 @@ focused_sound=true
 unfocused_notification=true
 unfocused_sound=true
 if [ -f "$CONFIG_FILE" ]; then
-  eval "$(/usr/bin/python3 -c "
+  {
+    IFS= read -r sound
+    IFS= read -r focused_notification
+    IFS= read -r focused_sound
+    IFS= read -r unfocused_notification
+    IFS= read -r unfocused_sound
+  } < <(/usr/bin/python3 -c "
 import json
 with open('$CONFIG_FILE') as f: c=json.load(f)
-f=c.get('focused',{})
+fc=c.get('focused',{})
 u=c.get('unfocused',{})
-print(f'sound={c.get(\"sound\",\"Glass\")}')
-print(f'focused_notification={str(f.get(\"notification\",True)).lower()}')
-print(f'focused_sound={str(f.get(\"sound\",True)).lower()}')
-print(f'unfocused_notification={str(u.get(\"notification\",True)).lower()}')
-print(f'unfocused_sound={str(u.get(\"sound\",True)).lower()}')
-" 2>/dev/null)"
+print(c.get('sound','Glass'))
+print(str(fc.get('notification',True)).lower())
+print(str(fc.get('sound',True)).lower())
+print(str(u.get('notification',True)).lower())
+print(str(u.get('sound',True)).lower())
+" 2>/dev/null)
 fi
 
 # Extract message, cwd, and session from the hook payload
@@ -27,26 +33,29 @@ message=""
 cwd=""
 session=""
 if [ -n "$input" ]; then
-  message=$(echo "$input" | /usr/bin/python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-tool=d.get('tool_name','')
+  {
+    IFS= read -r message
+    IFS= read -r cwd
+    IFS= read -r session
+  } < <(echo "$input" | /usr/bin/python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+tool = d.get('tool_name', '')
 if tool:
-    desc=d.get('tool_input',{}).get('description','') or d.get('tool_input',{}).get('command','')
-    if desc:
-        msg=f'Requesting permission to {tool}: {desc}'
-    else:
-        msg=f'Requesting permission to use {tool}'
+    desc = d.get('tool_input', {}).get('description', '') or d.get('tool_input', {}).get('command', '')
+    msg = f'Requesting permission to {tool}: {desc}' if desc else f'Requesting permission to use {tool}'
 else:
-    msg=d.get('last_assistant_message','')
-if not msg:sys.exit(1)
-if len(msg)<=100:print(msg)
-else:
- t=msg[:100];i=t.rfind(' ')
- print((t[:i] if i>0 else t)+'...')
-" 2>/dev/null) || exit 0
-  cwd=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cwd','').split('/')[-1])" 2>/dev/null)
-  session=$(echo "$input" | /usr/bin/python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('session_id','default'))" 2>/dev/null)
+    msg = d.get('last_assistant_message', '')
+if not msg:
+    sys.exit(1)
+if len(msg) > 100:
+    t = msg[:100]
+    i = t.rfind(' ')
+    msg = (t[:i] if i > 0 else t) + '...'
+print(msg)
+print(d.get('cwd', '').split('/')[-1])
+print(d.get('session_id', 'default'))
+" 2>/dev/null)
 fi
 [ -z "$message" ] && exit 0
 
@@ -120,8 +129,10 @@ if [ -n "$bundle" ]; then
 fi
 # Fall back to Claude icon if terminal icon not found
 [ -z "$content_image" ] && [ -f "$HOME/.claude/notify-icon.png" ] && content_image="$HOME/.claude/notify-icon.png"
-# Build click action: use -execute to raise the correct window by project name
-activate_flag=""
+# Build terminal-notifier command as an array to avoid word-splitting issues
+cmd=(terminal-notifier -title "$title" -message "$message" -group "${session:-default}")
+[ -n "$content_image" ] && cmd+=(-contentImage "$content_image")
+# Click action: use -execute to raise the correct window by project name
 if [ -n "$bundle" ] && [ -n "$cwd" ]; then
   safe_cwd=$(echo "$cwd" | sed 's/"/\\"/g')
   activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
@@ -140,11 +151,11 @@ osascript -e 'tell application id "$bundle" to activate' \\
 rm -f "\$0"
 SCRIPT
   chmod +x "$activate_script"
-  activate_flag="-execute $activate_script"
+  cmd+=(-execute "$activate_script")
 elif [ -n "$bundle" ]; then
-  activate_flag="-activate $bundle"
+  cmd+=(-activate "$bundle")
 fi
-terminal-notifier -title "$title" -message "$message" ${content_image:+-contentImage "$content_image"} -group "${session:-default}" $activate_flag
+"${cmd[@]}"
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &
