@@ -62,8 +62,8 @@ A config file is created at `~/.claude/notify-config.json`:
 {
   "sound": "Glass",
   "focused": {
-    "notification": false,
-    "sound": false
+    "notification": true,
+    "sound": true
   },
   "unfocused": {
     "notification": true,
@@ -75,8 +75,8 @@ A config file is created at `~/.claude/notify-config.json`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `sound` | `"Glass"` | macOS system sound to play (see list below) |
-| `focused.notification` | `false` | Show notifications when you're looking at this Claude session |
-| `focused.sound` | `false` | Play sound when you're looking at this Claude session |
+| `focused.notification` | `true` | Show notifications when you're looking at this Claude session |
+| `focused.sound` | `true` | Play sound when you're looking at this Claude session |
 | `unfocused.notification` | `true` | Show notifications when you're not looking at this Claude session |
 | `unfocused.sound` | `true` | Play sound when you're not looking at this Claude session |
 

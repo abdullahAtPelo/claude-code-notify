@@ -4,8 +4,8 @@ input=$(cat)
 # Load config (defaults if missing)
 CONFIG_FILE="$HOME/.claude/notify-config.json"
 sound="Glass"
-focused_notification=false
-focused_sound=false
+focused_notification=true
+focused_sound=true
 unfocused_notification=true
 unfocused_sound=true
 if [ -f "$CONFIG_FILE" ]; then
@@ -15,8 +15,8 @@ with open('$CONFIG_FILE') as f: c=json.load(f)
 f=c.get('focused',{})
 u=c.get('unfocused',{})
 print(f'sound={c.get(\"sound\",\"Glass\")}')
-print(f'focused_notification={str(f.get(\"notification\",False)).lower()}')
-print(f'focused_sound={str(f.get(\"sound\",False)).lower()}')
+print(f'focused_notification={str(f.get(\"notification\",True)).lower()}')
+print(f'focused_sound={str(f.get(\"sound\",True)).lower()}')
 print(f'unfocused_notification={str(u.get(\"notification\",True)).lower()}')
 print(f'unfocused_sound={str(u.get(\"sound\",True)).lower()}')
 " 2>/dev/null)"
