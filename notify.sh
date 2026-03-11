@@ -90,7 +90,12 @@ if [ -n "$TERM_PROGRAM" ]; then
   bundle=$(osascript -e "tell application \"System Events\" to get bundle identifier of application process \"$TERM_PROGRAM\"" 2>/dev/null)
 fi
 
-# Fallback: walk the process tree to find the parent GUI app (e.g. JetBrains)
+# Fallback: __CFBundleIdentifier is set by macOS for GUI app subprocesses (e.g. JetBrains IDEs)
+if [ -z "$bundle" ] && [ -n "$__CFBundleIdentifier" ]; then
+  bundle="$__CFBundleIdentifier"
+fi
+
+# Fallback: walk the process tree to find the parent GUI app
 if [ -z "$bundle" ]; then
   pid=$$
   while [ "$pid" != "1" ] && [ -n "$pid" ]; do
@@ -115,7 +120,32 @@ if [ -n "$bundle" ]; then
 fi
 # Fall back to Claude icon if terminal icon not found
 [ -z "$icon_flag" ] && [ -f "$HOME/.claude/notify-icon.png" ] && icon_flag="-contentImage $HOME/.claude/notify-icon.png"
-terminal-notifier -title "$title" -message "$message" $sound_flag $icon_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
+# Build click action: use -execute to raise the correct window by project name
+activate_flag=""
+if [ -n "$bundle" ] && [ -n "$cwd" ]; then
+  activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
+  cat > "$activate_script" <<SCRIPT
+#!/bin/bash
+osascript <<'AS'
+tell application id "$bundle" to activate
+delay 0.1
+tell application "System Events"
+  tell (first application process whose bundle identifier is "$bundle")
+    try
+      set targetWindow to first window whose name contains "$cwd"
+      perform action "AXRaise" of targetWindow
+    end try
+  end tell
+end tell
+AS
+rm -f "$activate_script"
+SCRIPT
+  chmod +x "$activate_script"
+  activate_flag="-execute $activate_script"
+elif [ -n "$bundle" ]; then
+  activate_flag="-activate $bundle"
+fi
+terminal-notifier -title "$title" -message "$message" $sound_flag $icon_flag -group "${session:-default}" $activate_flag
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &
