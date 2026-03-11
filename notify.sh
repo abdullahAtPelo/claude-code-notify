@@ -67,7 +67,7 @@ tell application "System Events"
     end try
 end tell' 2>/dev/null)
 if echo "$ax_value" | grep -q "Claude Code"; then
-  if [ -n "$cwd" ] && echo "$ax_value" | grep -q "$cwd"; then
+  if [ -n "$cwd" ] && echo "$ax_value" | grep -qF "$cwd"; then
     is_focused=true
   fi
 fi
