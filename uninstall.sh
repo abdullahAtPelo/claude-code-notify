@@ -40,4 +40,9 @@ fi
 rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json" "$HOME/.claude/notify-icon.png"
 echo "==> Removed notify scripts and config"
 
+echo ""
 echo "==> Done. Restart Claude Code for changes to take effect."
+echo ""
+echo "If you installed the plugin, also run these inside Claude Code:"
+echo "  /plugin uninstall claude-code-notify@abdullahAtPelo-claude-code-notify"
+echo "  /plugin marketplace remove abdullahAtPelo-claude-code-notify"

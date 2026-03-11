@@ -1,5 +1,5 @@
 {
-  "name": "abdullahAtPelo/claude-code-notify",
+  "name": "abdullahAtPelo-claude-code-notify",
   "owner": {
     "name": "Abdullah Bashir"
   },
@@ -8,10 +8,7 @@
     {
       "name": "claude-code-notify",
       "description": "Get notified when Claude finishes or needs permission, with smart focus detection",
-      "source": {
-        "source": "github",
-        "repo": "abdullahAtPelo/claude-code-notify"
-      }
+      "source": "."
     }
   ]
 }
