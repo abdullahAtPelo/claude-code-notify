@@ -37,8 +37,8 @@ Write the updated JSON to `~/.claude/notify-config.json`. The schema is:
 {
   "sound": "Glass",
   "focused": {
-    "notification": false,
-    "sound": false
+    "notification": true,
+    "sound": true
   },
   "unfocused": {
     "notification": true,
