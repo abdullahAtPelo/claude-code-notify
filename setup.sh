@@ -29,8 +29,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
 {
   "sound": "Glass",
   "focused": {
-    "notification": true,
-    "sound": true
+    "notification": false,
+    "sound": false
   },
   "unfocused": {
     "notification": true,
