@@ -125,22 +125,21 @@ fi
 # Build click action: use -execute to raise the correct window by project name
 activate_flag=""
 if [ -n "$bundle" ] && [ -n "$cwd" ]; then
+  safe_cwd=$(echo "$cwd" | sed 's/"/\\"/g')
   activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
   cat > "$activate_script" <<SCRIPT
 #!/bin/bash
-osascript <<'AS'
-tell application id "$bundle" to activate
-delay 0.1
-tell application "System Events"
-  tell (first application process whose bundle identifier is "$bundle")
-    try
-      set targetWindow to first window whose name contains "$cwd"
-      perform action "AXRaise" of targetWindow
-    end try
-  end tell
-end tell
-AS
-rm -f "$activate_script"
+osascript -e 'tell application id "$bundle" to activate' \\
+  -e 'delay 0.1' \\
+  -e 'tell application "System Events"' \\
+  -e '  tell (first application process whose bundle identifier is "$bundle")' \\
+  -e '    try' \\
+  -e '      set targetWindow to first window whose name contains "$safe_cwd"' \\
+  -e '      perform action "AXRaise" of targetWindow' \\
+  -e '    end try' \\
+  -e '  end tell' \\
+  -e 'end tell'
+rm -f "\$0"
 SCRIPT
   chmod +x "$activate_script"
   activate_flag="-execute $activate_script"
