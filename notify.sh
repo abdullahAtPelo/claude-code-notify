@@ -85,14 +85,12 @@ title="Claude Code${cwd:+ — $cwd}"
 
 bundle=""
 
-# Fast path: use TERM_PROGRAM if available (works for most terminals)
-if [ -n "$TERM_PROGRAM" ]; then
-  bundle=$(osascript -e "tell application \"System Events\" to get bundle identifier of application process \"$TERM_PROGRAM\"" 2>/dev/null)
-fi
-
-# Fallback: __CFBundleIdentifier is set by macOS for GUI app subprocesses (e.g. JetBrains IDEs)
-if [ -z "$bundle" ] && [ -n "$__CFBundleIdentifier" ]; then
+# Fast path: __CFBundleIdentifier is set by macOS for GUI app subprocesses (instant)
+if [ -n "$__CFBundleIdentifier" ]; then
   bundle="$__CFBundleIdentifier"
+# Try TERM_PROGRAM to resolve bundle ID via System Events
+elif [ -n "$TERM_PROGRAM" ]; then
+  bundle=$(osascript -e "tell application \"System Events\" to get bundle identifier of application process \"$TERM_PROGRAM\"" 2>/dev/null)
 fi
 
 # Fallback: walk the process tree to find the parent GUI app
