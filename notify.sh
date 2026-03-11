@@ -104,7 +104,9 @@ fi
 
 sound_flag=""
 [ "$notify_sound" = "true" ] && sound_flag="-sound $sound"
-terminal-notifier -title "$title" -message "$message" $sound_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
+icon_flag=""
+[ -f "$HOME/.claude/notify-icon.png" ] && icon_flag="-contentImage $HOME/.claude/notify-icon.png"
+terminal-notifier -title "$title" -message "$message" $sound_flag $icon_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
   [ -f "$sound_file" ] && afplay "$sound_file" &

@@ -37,7 +37,7 @@ with open('$SETTINGS_FILE', 'w') as f:
 fi
 
 # Remove scripts and config
-rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json"
+rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json" "$HOME/.claude/notify-icon.png"
 echo "==> Removed notify scripts and config"
 
 echo "==> Done. Restart Claude Code for changes to take effect."

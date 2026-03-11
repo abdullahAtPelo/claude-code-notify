@@ -18,6 +18,7 @@ mkdir -p "$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cp "$SCRIPT_DIR/notify.sh" "$HOME/.claude/notify.sh"
 cp "$SCRIPT_DIR/notify-clear.sh" "$HOME/.claude/notify-clear.sh"
+cp "$SCRIPT_DIR/assets/icon.png" "$HOME/.claude/notify-icon.png"
 chmod +x "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh"
 echo "==> Installed notify scripts to ~/.claude/"
 
