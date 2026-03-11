@@ -14,6 +14,16 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 
 ## Install
 
+Clone the repo and open Claude Code in it — Claude will walk you through setup automatically:
+
+```bash
+git clone https://github.com/abdullahAtPelo/claude-code-notify.git
+cd claude-code-notify
+claude
+```
+
+Or install manually:
+
 ```bash
 git clone https://github.com/abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
@@ -28,10 +38,14 @@ Then:
 
 The plugin is **not required** — notifications work fully without it. It just adds the `/notify-config` command, which lets you change settings from inside Claude Code instead of editing the JSON file manually.
 
+Run these inside Claude Code:
+
 ```
 /plugin marketplace add abdullahAtPelo/claude-code-notify
 /plugin install claude-code-notify@abdullahAtPelo/claude-code-notify
 ```
+
+When prompted, select **"Install for you (user scope)"**.
 
 ## Uninstall
 

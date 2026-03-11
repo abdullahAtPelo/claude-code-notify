@@ -20,6 +20,8 @@ Then offer to install the optional plugin for the `/notify-config` command — e
 /plugin install claude-code-notify@abdullahAtPelo/claude-code-notify
 ```
 
+After running `/plugin install`, a prompt will appear — tell the user to select **"Install for you (user scope)"**.
+
 ## Structure
 
 - `notify.sh` — Main notification script (called by Stop and PermissionRequest hooks)
