@@ -14,13 +14,15 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 
 ## Install
 
-Clone the repo and open Claude Code in it — Claude will walk you through setup automatically:
+Clone the repo, open Claude Code in it, and ask Claude to help you set it up:
 
 ```bash
 git clone https://github.com/abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
 claude
 ```
+
+Then tell Claude: **"help me set up notifications"** — it'll run the installer and walk you through the rest.
 
 Or install manually:
 
