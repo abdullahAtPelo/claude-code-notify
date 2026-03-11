@@ -104,8 +104,17 @@ fi
 
 sound_flag=""
 [ "$notify_sound" = "true" ] && sound_flag="-sound $sound"
+# Resolve terminal app icon for content image
 icon_flag=""
-[ -f "$HOME/.claude/notify-icon.png" ] && icon_flag="-contentImage $HOME/.claude/notify-icon.png"
+if [ -n "$bundle" ]; then
+  app_path=$(mdfind "kMDItemCFBundleIdentifier == '$bundle'" 2>/dev/null | head -1)
+  if [ -n "$app_path" ]; then
+    app_icon=$(ls "$app_path/Contents/Resources/"*.icns 2>/dev/null | head -1)
+    [ -n "$app_icon" ] && icon_flag="-contentImage $app_icon"
+  fi
+fi
+# Fall back to Claude icon if terminal icon not found
+[ -z "$icon_flag" ] && [ -f "$HOME/.claude/notify-icon.png" ] && icon_flag="-contentImage $HOME/.claude/notify-icon.png"
 terminal-notifier -title "$title" -message "$message" $sound_flag $icon_flag -group "${session:-default}" ${bundle:+-activate "$bundle"}
 if [ "$notify_sound" = "true" ]; then
   sound_file="/System/Library/Sounds/${sound}.aiff"
