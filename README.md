@@ -24,7 +24,9 @@ Then:
 1. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and set the style to **Alerts** (if you want them to persist until clicked)
 2. Restart Claude Code
 
-Optionally, add the plugin for the `/notify-config` command:
+### Optional: install the plugin
+
+The plugin is **not required** — notifications work fully without it. It just adds the `/notify-config` command, which lets you change settings from inside Claude Code instead of editing the JSON file manually.
 
 ```
 /plugin marketplace add abdullahAtPelo/claude-code-notify
