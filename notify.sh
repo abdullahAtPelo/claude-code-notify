@@ -129,11 +129,97 @@ if [ -n "$bundle" ]; then
 fi
 # Fall back to Claude icon if terminal icon not found
 [ -z "$content_image" ] && [ -f "$HOME/.claude/notify-icon.png" ] && content_image="$HOME/.claude/notify-icon.png"
+# For JetBrains IDEs, detect which terminal tab is active (likely the one running Claude)
+jb_tab=""
+case "$bundle" in
+  com.jetbrains.*|com.google.android.studio)
+    for jb_port in $(seq 63342 63351); do
+      jb_tabs=$(curl -sf --connect-timeout 0.5 "http://127.0.0.1:$jb_port/api/claude/terminal/tabs" 2>/dev/null) && break
+      jb_port=""
+    done
+    if [ -n "$jb_tabs" ]; then
+      # Identify our terminal tab by walking the process tree.
+      # Our shell is the ancestor of this script whose parent has no TTY (the IDE process).
+      _pid=$$
+      _shell_pid=""
+      _ide_pid=""
+      while true; do
+        _ppid=$(ps -o ppid= -p "$_pid" 2>/dev/null | tr -d ' ')
+        [ -z "$_ppid" ] || [ "$_ppid" = "0" ] || [ "$_ppid" = "1" ] && break
+        _ptty=$(ps -o tty= -p "$_ppid" 2>/dev/null | tr -d ' ')
+        if [ "$_ptty" = "??" ]; then
+          _shell_pid=$_pid
+          _ide_pid=$_ppid
+          break
+        fi
+        _pid=$_ppid
+      done
+
+      if [ -n "$_shell_pid" ] && [ -n "$_ide_pid" ]; then
+        # Find all IDE child shells with TTYs (sorted by PID = creation order)
+        _all_ide_shells=$(ps -eo pid,ppid,tty 2>/dev/null | awk -v ide="$_ide_pid" '$2 == ide && $3 != "??" { print $1 }' | sort -n)
+
+        # Filter to shells whose CWD basename matches our project, find our index
+        _index=0
+        _found=false
+        for _spid in $_all_ide_shells; do
+          _scwd=$(lsof -a -d cwd -p "$_spid" -Fn 2>/dev/null | awk '/^n/{sub(/^n/,""); print; exit}')
+          _scwd_name=$(basename "$_scwd" 2>/dev/null)
+          if [ "$_scwd_name" = "$cwd" ]; then
+            if [ "$_spid" = "$_shell_pid" ]; then
+              _found=true
+              break
+            fi
+            _index=$((_index + 1))
+          fi
+        done
+
+        if [ "$_found" = "true" ]; then
+          jb_tab=$(echo "$jb_tabs" | /usr/bin/python3 -c "
+import sys, json
+cwd = sys.argv[1]
+index = int(sys.argv[2])
+tabs = [t for t in json.load(sys.stdin) if t['project'] == cwd]
+if index < len(tabs):
+    print(tabs[index]['tab'])
+" "$cwd" "$_index" 2>/dev/null)
+        fi
+      fi
+
+      # Fallback: selected tab
+      if [ -z "$jb_tab" ]; then
+        jb_tab=$(echo "$jb_tabs" | /usr/bin/python3 -c "
+import sys, json
+cwd = sys.argv[1]
+for t in json.load(sys.stdin):
+    if t['project'] == cwd and t.get('selected'):
+        print(t['tab'])
+        break
+" "$cwd" 2>/dev/null)
+      fi
+    fi
+    ;;
+esac
 # Build terminal-notifier command as an array to avoid word-splitting issues
 cmd=(terminal-notifier -title "$title" -message "$message" -group "${session:-default}")
 [ -n "$content_image" ] && cmd+=(-contentImage "$content_image")
-# Click action: use -execute to raise the correct window by project name
-if [ -n "$bundle" ] && [ -n "$cwd" ]; then
+# Click action: raise the correct window and terminal tab
+if [ -n "$jb_tab" ]; then
+  # JetBrains: plugin handles window activation + tab focus sequentially
+  jb_url_project=$(echo "$cwd" | /usr/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))" 2>/dev/null)
+  jb_url_tab=$(echo "$jb_tab" | /usr/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))" 2>/dev/null)
+  activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
+  cat > "$activate_script" <<SCRIPT
+#!/bin/bash
+for p in \$(seq 63342 63351); do
+  curl -sf "http://127.0.0.1:\$p/api/claude/terminal/focus?project=$jb_url_project&tab=$jb_url_tab" >/dev/null 2>&1 && break
+done
+rm -f "\$0"
+SCRIPT
+  chmod +x "$activate_script"
+  cmd+=(-execute "$activate_script")
+elif [ -n "$bundle" ] && [ -n "$cwd" ]; then
+  # Other terminals: AppleScript to raise the correct window
   safe_cwd=$(echo "$cwd" | sed 's/"/\\"/g')
   activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
   cat > "$activate_script" <<SCRIPT

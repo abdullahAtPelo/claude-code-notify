@@ -83,12 +83,52 @@ with open(path, 'w') as f:
     f.write('\n')
 " && echo "==> Added hooks to $SETTINGS_FILE"
 
+# Install JetBrains terminal focus plugin if any JetBrains IDEs are detected
+JB_PLUGIN_ZIP="$SCRIPT_DIR/jetbrains-plugin/dist/claude-code-terminal-focus-1.0.0.zip"
+if [ -f "$JB_PLUGIN_ZIP" ]; then
+  jb_installed=false
+  # Find the latest version directory for each IDE
+  /usr/bin/python3 -c "
+import os, re, sys
+jb_base = os.path.expanduser('~/Library/Application Support/JetBrains')
+ide_pattern = re.compile(r'^(GoLand|IntelliJIdea|PyCharm|WebStorm|Rider|PhpStorm|CLion|RubyMine|DataGrip|AndroidStudio)(.+)$')
+latest = {}
+for name in sorted(os.listdir(jb_base)):
+    m = ide_pattern.match(name)
+    if not m:
+        continue
+    path = os.path.join(jb_base, name, 'plugins')
+    if not os.path.isdir(path):
+        continue
+    ide, ver = m.group(1), m.group(2)
+    latest[ide] = name
+for name in latest.values():
+    print(name)
+" 2>/dev/null | while IFS= read -r jb_name; do
+    jb_dir="$HOME/Library/Application Support/JetBrains/$jb_name"
+    rm -rf "$jb_dir/plugins/claude-code-terminal-focus"
+    unzip -qo "$JB_PLUGIN_ZIP" -d "$jb_dir/plugins/"
+    jb_installed=true
+    echo "==> Installed terminal focus plugin to $jb_name"
+  done
+  # Check if any were installed (pipe runs in subshell so we re-check)
+  for jb_dir in "$HOME/Library/Application Support/JetBrains"/*/plugins/claude-code-terminal-focus; do
+    [ -d "$jb_dir" ] && jb_installed=true && break
+  done
+  if [ "$jb_installed" = "false" ]; then
+    echo "==> No JetBrains IDEs detected, skipping terminal focus plugin"
+  fi
+fi
+
 echo ""
 echo "Done! Next steps:"
 echo "  1. Enable notifications for terminal-notifier in:"
 echo "     System Settings → Notifications → terminal-notifier"
 echo "  2. Set the alert style to 'Alerts' if you want notifications to persist"
 echo "  3. Restart Claude Code"
+if [ "$jb_installed" = "true" ]; then
+  echo "  4. Restart any open JetBrains IDEs to load the terminal focus plugin"
+fi
 echo ""
 echo "Optional: install the plugin for the /notify-config command."
 echo "Run these inside Claude Code from this directory ($SCRIPT_DIR):"

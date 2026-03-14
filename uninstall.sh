@@ -40,6 +40,14 @@ fi
 rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json" "$HOME/.claude/notify-icon.png"
 echo "==> Removed notify scripts and config"
 
+# Remove JetBrains terminal focus plugin
+for jb_dir in "$HOME/Library/Application Support/JetBrains"/*/plugins/claude-code-terminal-focus; do
+  if [ -d "$jb_dir" ]; then
+    rm -rf "$jb_dir"
+    echo "==> Removed terminal focus plugin from $(basename "$(dirname "$(dirname "$jb_dir")")")"
+  fi
+done
+
 echo ""
 echo "==> Done. Restart Claude Code for changes to take effect."
 echo ""

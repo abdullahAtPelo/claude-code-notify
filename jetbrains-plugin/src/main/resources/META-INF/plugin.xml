@@ -1,0 +1,13 @@
+<idea-plugin>
+    <id>com.claudecode.terminal-focus</id>
+    <name>Claude Code Terminal Focus</name>
+    <vendor>claude-code-notify</vendor>
+    <description>Exposes a local HTTP API on the IDE's built-in server for focusing specific terminal tabs. Used by claude-code-notify to open the right terminal when a notification is clicked.</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <httpRequestHandler implementation="com.claudecode.terminal.TerminalFocusHandler"/>
+    </extensions>
+</idea-plugin>
