@@ -6,6 +6,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.ui.content.ContentManagerEvent
+import com.intellij.ui.content.ContentManagerListener
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.*
@@ -104,10 +106,9 @@ class TerminalFocusHandler : HttpRequestHandler() {
 
                 val bundleId = getBundleId()
                 if (bundleId.isNotEmpty()) {
-                    val proc = ProcessBuilder(
+                    ProcessBuilder(
                         "osascript",
                         "-e", "tell application id \"$bundleId\" to activate",
-                        "-e", "delay 0.2",
                         "-e", "tell application \"System Events\"",
                         "-e", "  tell (first application process whose bundle identifier is \"$bundleId\")",
                         "-e", "    try",
@@ -116,26 +117,39 @@ class TerminalFocusHandler : HttpRequestHandler() {
                         "-e", "    end try",
                         "-e", "  end tell",
                         "-e", "end tell"
-                    ).start()
-                    proc.waitFor()
+                    ).start().waitFor()
                 }
 
                 if (targetTab != null) {
-                    for (i in 0 until 20) {
-                        Thread.sleep(100)
-                        var switched = false
-                        ApplicationManager.getApplication().invokeAndWait {
-                            val toolWindow = ToolWindowManager.getInstance(proj)
-                                .getToolWindow("Terminal") ?: return@invokeAndWait
-                            val cm = toolWindow.contentManager
-                            val content = cm.contents.firstOrNull { it.displayName == targetTab }
-                                ?: return@invokeAndWait
-                            if (cm.selectedContent != content) {
-                                cm.setSelectedContent(content, true)
-                                switched = true
+                    ApplicationManager.getApplication().invokeLater {
+                        val toolWindow = ToolWindowManager.getInstance(proj)
+                            .getToolWindow("Terminal") ?: return@invokeLater
+                        val cm = toolWindow.contentManager
+                        val content = cm.contents.firstOrNull { it.displayName == targetTab }
+                            ?: return@invokeLater
+
+                        // Switch immediately
+                        cm.setSelectedContent(content, true)
+
+                        // Listen for selection changes to counter GoLand's state restoration
+                        val listener = object : ContentManagerListener {
+                            private var corrections = 0
+                            override fun selectionChanged(event: ContentManagerEvent) {
+                                if (event.content != content && corrections < 5) {
+                                    corrections++
+                                    cm.setSelectedContent(content, true)
+                                }
                             }
                         }
-                        if (!switched && i > 2) break
+                        cm.addContentManagerListener(listener)
+
+                        // Clean up listener after window activation settles
+                        ApplicationManager.getApplication().executeOnPooledThread {
+                            Thread.sleep(2000)
+                            ApplicationManager.getApplication().invokeLater {
+                                cm.removeContentManagerListener(listener)
+                            }
+                        }
                     }
                 }
             } catch (e: Exception) {
