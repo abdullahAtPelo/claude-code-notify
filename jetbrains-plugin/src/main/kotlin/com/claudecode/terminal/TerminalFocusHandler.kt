@@ -16,6 +16,7 @@ import org.jetbrains.ide.HttpRequestHandler
 class TerminalFocusHandler : HttpRequestHandler() {
     companion object {
         private val LOG = Logger.getInstance(TerminalFocusHandler::class.java)
+        @Volatile private var cachedBundleId: String? = null
     }
 
     override fun isSupported(request: FullHttpRequest): Boolean {
@@ -61,20 +62,20 @@ class TerminalFocusHandler : HttpRequestHandler() {
     }
 
     private fun getBundleId(): String {
+        cachedBundleId?.let { return it }
+
+        val result = resolveBundleId()
+        if (result.isNotEmpty()) cachedBundleId = result
+        return result
+    }
+
+    private fun resolveBundleId(): String {
         val sysProp = System.getProperty("__CFBundleIdentifier")
         if (!sysProp.isNullOrEmpty()) return sysProp
 
-        try {
-            val proc = ProcessBuilder("osascript", "-e",
-                "tell application \"System Events\" to get bundle identifier of (first application process whose unix id is ${ProcessHandle.current().pid()})"
-            ).start()
-            val result = proc.inputStream.bufferedReader().readText().trim()
-            proc.waitFor()
-            if (result.isNotEmpty()) return result
-        } catch (_: Exception) {}
-
+        // Try product name mapping first (instant, covers all common JetBrains IDEs)
         val product = ApplicationNamesInfo.getInstance().productName.lowercase()
-        return when {
+        val mapped = when {
             "goland" in product -> "com.jetbrains.goland"
             "intellij" in product -> "com.jetbrains.intellij"
             "pycharm" in product -> "com.jetbrains.pycharm"
@@ -84,8 +85,21 @@ class TerminalFocusHandler : HttpRequestHandler() {
             "clion" in product -> "com.jetbrains.clion"
             "rubymine" in product -> "com.jetbrains.rubymine"
             "datagrip" in product -> "com.jetbrains.datagrip"
-            else -> ""
+            else -> null
         }
+        if (mapped != null) return mapped
+
+        // Fallback: ask System Events (slow, only for unknown IDEs)
+        try {
+            val proc = ProcessBuilder("osascript", "-e",
+                "tell application \"System Events\" to get bundle identifier of (first application process whose unix id is ${ProcessHandle.current().pid()})"
+            ).start()
+            val result = proc.inputStream.bufferedReader().readText().trim()
+            proc.waitFor()
+            if (result.isNotEmpty()) return result
+        } catch (_: Exception) {}
+
+        return ""
     }
 
     private fun handleFocus(urlDecoder: QueryStringDecoder, context: ChannelHandlerContext) {
@@ -145,7 +159,7 @@ class TerminalFocusHandler : HttpRequestHandler() {
 
                         // Clean up listener after window activation settles
                         ApplicationManager.getApplication().executeOnPooledThread {
-                            Thread.sleep(2000)
+                            Thread.sleep(1000)
                             ApplicationManager.getApplication().invokeLater {
                                 cm.removeContentManagerListener(listener)
                             }

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Clean up stale activate scripts (only deleted on click, not dismiss)
+find /tmp -name 'notify-activate.*' -mmin +60 -delete 2>/dev/null
+
 input=$(cat)
 
 # Load config (defaults if missing)
@@ -225,7 +228,6 @@ elif [ -n "$bundle" ] && [ -n "$cwd" ]; then
   cat > "$activate_script" <<SCRIPT
 #!/bin/bash
 osascript -e 'tell application id "$bundle" to activate' \\
-  -e 'delay 0.1' \\
   -e 'tell application "System Events"' \\
   -e '  tell (first application process whose bundle identifier is "$bundle")' \\
   -e '    try' \\
