@@ -62,6 +62,7 @@ clear_cmd = 'bash ~/.claude/notify-clear.sh'
 hook_defs = {
     'Stop': notify_cmd,
     'PermissionRequest': notify_cmd,
+    'PreToolUse': clear_cmd,
     'UserPromptSubmit': clear_cmd,
 }
 
