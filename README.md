@@ -15,7 +15,7 @@ Native macOS notifications for Claude Code. Get notified when Claude finishes a 
 ## Install
 
 ```bash
-git clone https://github.com/abdullahAtPelo/claude-code-notify.git
+git clone git@github.com:abdullahAtPelo/claude-code-notify.git
 cd claude-code-notify
 make install
 ```
