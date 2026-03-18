@@ -6,8 +6,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
+import com.intellij.terminal.JBTerminalWidget
+import com.jediterm.terminal.TtyConnector
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.*
@@ -16,7 +19,8 @@ import org.jetbrains.ide.HttpRequestHandler
 class TerminalFocusHandler : HttpRequestHandler() {
     companion object {
         private val LOG = Logger.getInstance(TerminalFocusHandler::class.java)
-        @Volatile private var cachedBundleId: String? = null
+        @Volatile
+        private var cachedBundleId: String? = null
     }
 
     override fun isSupported(request: FullHttpRequest): Boolean {
@@ -49,16 +53,131 @@ class TerminalFocusHandler : HttpRequestHandler() {
                     val toolWindow = ToolWindowManager.getInstance(project)
                         .getToolWindow("Terminal") ?: continue
                     val cm = toolWindow.contentManager
+                    val viewMap = buildContentViewMap(project)
                     for (content in cm.contents) {
                         val selected = cm.selectedContent == content
+                        val pid = getShellPid(content, viewMap)
+                        val pidJson = if (pid > 0) ""","pid":$pid""" else ""
                         tabs.add(
-                            """{"project":"${esc(project.name)}","tab":"${esc(content.displayName ?: "")}","selected":$selected}"""
+                            """{"project":"${esc(project.name)}","tab":"${esc(content.displayName ?: "")}","selected":$selected$pidJson}"""
                         )
                     }
                 }
             }
         } catch (_: Exception) {}
         sendJson(context, HttpResponseStatus.OK, "[${tabs.joinToString(",")}]")
+    }
+
+    private fun getShellPid(content: Content, viewMap: Map<Content, Any>): Long {
+        // Classic terminal (PyCharm, older IDEs): JBTerminalWidget in Swing tree
+        try {
+            val widget = findTerminalWidget(content.component)
+            if (widget != null) {
+                val connector = widget.processTtyConnector ?: return -1
+                return connector.process.pid()
+            }
+        } catch (_: Exception) {}
+
+        // New terminal (IntelliJ 2025.x+): resolve via TerminalView session
+        val view = viewMap[content] ?: return -1
+        return getNewTerminalPid(view)
+    }
+
+    /**
+     * Build Content → TerminalView map via TerminalToolWindowTabsManager (2025.x+).
+     * Uses reflection since this API doesn't exist in older IDEs.
+     */
+    private fun buildContentViewMap(project: Project): Map<Content, Any> {
+        return try {
+            val mgrClass = Class.forName(
+                "com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager"
+            )
+            // getInstance is @JvmStatic on the Companion → callable as static method
+            val manager = mgrClass.getMethod("getInstance", Project::class.java)
+                .invoke(null, project) ?: return emptyMap()
+            val tabs = manager.javaClass.getMethod("getTabs").invoke(manager) as? List<*>
+                ?: return emptyMap()
+            val tabClass = Class.forName(
+                "com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTab"
+            )
+            val getContent = tabClass.getMethod("getContent")
+            val getView = tabClass.getMethod("getView")
+            val map = mutableMapOf<Content, Any>()
+            for (tab in tabs) {
+                tab ?: continue
+                val content = getContent.invoke(tab) as? Content ?: continue
+                val view = getView.invoke(tab) ?: continue
+                map[content] = view
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Extract shell PID from a new terminal TerminalView via reflection.
+     * Path: TerminalViewImpl.sessionFuture → FrontendTerminalSession.id
+     *     → TerminalSessionsManager.getSession(id) → backend chain → ttyConnector → pid
+     */
+    private fun getNewTerminalPid(view: Any): Long {
+        try {
+            val sessionField = view.javaClass.getDeclaredField("sessionFuture")
+            sessionField.isAccessible = true
+            val future = sessionField.get(view) as? java.util.concurrent.CompletableFuture<*>
+                ?: return -1
+            if (!future.isDone) return -1
+            val frontendSession = future.get() ?: return -1
+
+            // Get the session ID from FrontendTerminalSession
+            val idField = frontendSession.javaClass.getDeclaredField("id")
+            idField.isAccessible = true
+            val sessionId = idField.get(frontendSession) ?: return -1
+
+            // Look up the backend session via TerminalSessionsManager
+            val mgrClass = Class.forName("com.intellij.terminal.backend.TerminalSessionsManager")
+            val mgr = mgrClass.getMethod("getInstance").invoke(null) ?: return -1
+            val backendSession = mgrClass.getMethod("getSession", sessionId.javaClass).invoke(mgr, sessionId)
+                ?: return -1
+
+            // Walk the delegation chain to find ttyConnector
+            val connector = findTtyConnector(backendSession) ?: return -1
+
+            val ptc = org.jetbrains.plugins.terminal.ShellTerminalWidget
+                .getProcessTtyConnector(connector) ?: return -1
+            return ptc.process.pid()
+        } catch (_: Exception) {}
+        return -1
+    }
+
+    /** Walk delegate chain (StateAwareTerminalSession → BackendTerminalSessionImpl) to find ttyConnector. */
+    private fun findTtyConnector(session: Any): TtyConnector? {
+        // Try ttyConnector field directly (BackendTerminalSessionImpl)
+        try {
+            val f = session.javaClass.getDeclaredField("ttyConnector")
+            f.isAccessible = true
+            return f.get(session) as? TtyConnector
+        } catch (_: NoSuchFieldException) {}
+
+        // Try delegate field (StateAwareTerminalSession wraps BackendTerminalSessionImpl)
+        try {
+            val f = session.javaClass.getDeclaredField("delegate")
+            f.isAccessible = true
+            val delegate = f.get(session) ?: return null
+            return findTtyConnector(delegate)
+        } catch (_: NoSuchFieldException) {}
+
+        return null
+    }
+
+    private fun findTerminalWidget(component: java.awt.Component): JBTerminalWidget? {
+        if (component is JBTerminalWidget) return component
+        if (component is java.awt.Container) {
+            for (child in component.components) {
+                findTerminalWidget(child)?.let { return it }
+            }
+        }
+        return null
     }
 
     private fun getBundleId(): String {

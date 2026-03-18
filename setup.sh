@@ -137,9 +137,9 @@ fi
 rm -rf "$HOME/.claude/plugins/cache/" 2>/dev/null
 
 # Install JetBrains terminal focus plugin if any JetBrains IDEs are detected
-JB_PLUGIN_ZIP="$SCRIPT_DIR/jetbrains-plugin/dist/claude-code-terminal-focus-1.0.0.zip"
+jb_installed=false
+JB_PLUGIN_ZIP="$SCRIPT_DIR/jetbrains-plugin/dist/claude-code-terminal-focus-1.1.0.zip"
 if [ -f "$JB_PLUGIN_ZIP" ]; then
-  jb_installed=false
   # Find the latest version directory for each IDE
   /usr/bin/python3 -c "
 import os, re, sys
@@ -182,4 +182,5 @@ if [ "$jb_installed" = "true" ]; then
   echo "  3. Restart any open JetBrains IDEs to load the terminal focus plugin"
 fi
 echo ""
-echo "To update later: cd $(basename "$SCRIPT_DIR") && git checkout main && make update"
+echo "Restart Claude Code for hooks to take effect."
+echo "To update later: cd $(basename "$SCRIPT_DIR") && make update"
