@@ -154,18 +154,12 @@ class TerminalFocusHandler : HttpRequestHandler() {
                                     if (event.content != content && corrections < 5) {
                                         corrections++
                                         cm.setSelectedContent(content, true)
+                                    } else {
+                                        cm.removeContentManagerListener(this)
                                     }
                                 }
                             }
                             cm.addContentManagerListener(listener)
-
-                            // Clean up listener after window activation settles
-                            ApplicationManager.getApplication().executeOnPooledThread {
-                                Thread.sleep(1000)
-                                ApplicationManager.getApplication().invokeLater {
-                                    cm.removeContentManagerListener(listener)
-                                }
-                            }
                         }
                     }
                 }
