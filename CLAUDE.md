@@ -16,7 +16,7 @@ If they agree, run `make install`. After it completes, tell them:
 Then offer to install the optional plugin for the `/notify-config` command — explain it's not required but lets them change settings from chat. If they want it, tell them to run these commands after restarting:
 
 ```
-/plugin marketplace add .
+/plugin marketplace add ./
 /plugin install claude-code-notify@abdullahAtPelo-claude-code-notify
 ```
 

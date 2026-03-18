@@ -43,7 +43,7 @@ The plugin is **not required** — notifications work fully without it. It just 
 Run these inside Claude Code from the cloned `claude-code-notify` directory:
 
 ```
-/plugin marketplace add .
+/plugin marketplace add ./
 /plugin install claude-code-notify@abdullahAtPelo-claude-code-notify
 ```
 

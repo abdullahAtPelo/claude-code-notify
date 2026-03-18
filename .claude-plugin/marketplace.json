@@ -8,7 +8,7 @@
     {
       "name": "claude-code-notify",
       "description": "Get notified when Claude finishes or needs permission, with smart focus detection",
-      "source": "."
+      "source": "./"
     }
   ]
 }
