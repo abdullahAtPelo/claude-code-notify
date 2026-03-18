@@ -22,6 +22,11 @@ cp "$SCRIPT_DIR/assets/icon.png" "$HOME/.claude/notify-icon.png"
 chmod +x "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh"
 echo "==> Installed notify scripts to ~/.claude/"
 
+# Install /notify-config skill
+mkdir -p "$HOME/.claude/skills/notify-config"
+cp "$SCRIPT_DIR/skills/notify-config/SKILL.md" "$HOME/.claude/skills/notify-config/SKILL.md"
+echo "==> Installed /notify-config skill"
+
 # Create default config if it doesn't exist
 CONFIG_FILE="$HOME/.claude/notify-config.json"
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -131,8 +136,4 @@ if [ "$jb_installed" = "true" ]; then
   echo "  4. Restart any open JetBrains IDEs to load the terminal focus plugin"
 fi
 echo ""
-echo "Optional: install the plugin for the /notify-config command."
-echo "Run these inside Claude Code from this directory ($SCRIPT_DIR):"
-echo "  /plugin marketplace add ."
-echo "  /plugin install claude-code-notify@abdullahAtPelo-claude-code-notify"
-echo "  Then select 'Install for you (user scope)' when prompted."
+echo "To update later: cd $(basename "$SCRIPT_DIR") && git pull && make install"

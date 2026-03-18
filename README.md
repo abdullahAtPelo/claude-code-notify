@@ -36,18 +36,12 @@ Then:
 1. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and set the style to **Alerts** (if you want them to persist until clicked)
 2. Restart Claude Code
 
-### Optional: install the plugin
+### Updating
 
-The plugin is **not required** — notifications work fully without it. It just adds the `/notify-config` command, which lets you change settings from inside Claude Code instead of editing the JSON file manually.
-
-Run these inside Claude Code from the cloned `claude-code-notify` directory:
-
+```bash
+cd claude-code-notify
+make update
 ```
-/plugin marketplace add ./
-/plugin install claude-code-notify@abdullahAtPelo-claude-code-notify
-```
-
-When prompted, select **"Install for you (user scope)"**.
 
 ## Uninstall
 
@@ -88,14 +82,15 @@ Changes take effect immediately — no restart needed.
 
 ### Using `/notify-config`
 
-You can also configure notifications by typing `/claude-code-notify:notify-config` in Claude Code. Claude will show your current settings and walk you through changing them.
+You can also configure notifications by typing `/notify-config` in Claude Code. Claude will show your current settings and walk you through changing them.
 
 ## How it works
 
-The installer registers three hooks in `~/.claude/settings.json`:
+The installer registers hooks in `~/.claude/settings.json`:
 - **Stop** — fires when Claude finishes a response
 - **PermissionRequest** — fires when Claude needs you to approve a tool call
-- **UserPromptSubmit** — clears stale notifications when you send a new prompt
+- **PreToolUse** — clears the permission notification when you approve a tool
+- **UserPromptSubmit** — clears notifications when you send a new prompt
 
 The script:
 

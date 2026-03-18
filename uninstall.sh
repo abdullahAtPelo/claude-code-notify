@@ -16,7 +16,7 @@ with open('$SETTINGS_FILE') as f:
 hooks = settings.get('hooks', {})
 cmds_to_remove = {'bash ~/.claude/notify.sh', 'bash ~/.claude/notify-clear.sh'}
 
-for event in ['Stop', 'PermissionRequest', 'UserPromptSubmit']:
+for event in ['Stop', 'PermissionRequest', 'PreToolUse', 'UserPromptSubmit']:
     entries = hooks.get(event, [])
     entries = [
         entry for entry in entries
@@ -36,9 +36,10 @@ with open('$SETTINGS_FILE', 'w') as f:
 " && echo "==> Removed hooks from $SETTINGS_FILE"
 fi
 
-# Remove scripts and config
+# Remove scripts, config, and skill
 rm -f "$HOME/.claude/notify.sh" "$HOME/.claude/notify-clear.sh" "$HOME/.claude/notify-config.json" "$HOME/.claude/notify-icon.png"
-echo "==> Removed notify scripts and config"
+rm -rf "$HOME/.claude/skills/notify-config"
+echo "==> Removed notify scripts, config, and skill"
 
 # Remove JetBrains terminal focus plugin
 for jb_dir in "$HOME/Library/Application Support/JetBrains"/*/plugins/claude-code-terminal-focus; do
@@ -50,7 +51,3 @@ done
 
 echo ""
 echo "==> Done. Restart Claude Code for changes to take effect."
-echo ""
-echo "If you installed the plugin, also run these inside Claude Code:"
-echo "  /plugin uninstall claude-code-notify@abdullahAtPelo-claude-code-notify"
-echo "  /plugin marketplace remove abdullahAtPelo-claude-code-notify"

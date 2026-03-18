@@ -1,6 +1,10 @@
-.PHONY: install uninstall lint help
+.PHONY: install update uninstall lint help
 
 install:
+	@bash setup.sh
+
+update:
+	@git pull
 	@bash setup.sh
 
 uninstall:
@@ -17,7 +21,8 @@ lint:
 help:
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "  install   - Install scripts and config to ~/.claude/"
+	@echo "  install   - Install scripts, hooks, and skills to ~/.claude/"
+	@echo "  update    - Pull latest changes and reinstall"
 	@echo "  uninstall - Remove hooks and scripts"
 	@echo "  lint      - Run shellcheck on all scripts"
 	@echo "  help      - Show this help message"

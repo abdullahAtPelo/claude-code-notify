@@ -13,14 +13,7 @@ If they agree, run `make install`. After it completes, tell them:
 1. Open **System Settings → Notifications → terminal-notifier**, enable notifications, and optionally set the style to **Alerts**
 2. Restart Claude Code
 
-Then offer to install the optional plugin for the `/notify-config` command — explain it's not required but lets them change settings from chat. If they want it, tell them to run these commands after restarting:
-
-```
-/plugin marketplace add ./
-/plugin install claude-code-notify@abdullahAtPelo-claude-code-notify
-```
-
-After running `/plugin install`, a prompt will appear — tell the user to select **"Install for you (user scope)"**.
+The `/notify-config` skill is installed automatically by `make install`.
 
 ## Structure
 
@@ -29,16 +22,6 @@ After running `/plugin install`, a prompt will appear — tell the user to selec
 - `setup.sh` / `uninstall.sh` — Install/remove scripts and hooks
 - `skills/notify-config/` — `/notify-config` skill for in-chat configuration
 - Config lives at `~/.claude/notify-config.json`
-
-## Plugin versioning
-
-Bump `version` in `.claude-plugin/plugin.json` when changing any of these plugin files:
-
-- `.claude-plugin/plugin.json`
-- `.claude-plugin/marketplace.json`
-- `skills/notify-config/SKILL.md`
-
-The plugin cache (`~/.claude/plugins/cache/`) only refreshes when the version changes. Without a bump, users won't pick up updates.
 
 ## Testing
 
