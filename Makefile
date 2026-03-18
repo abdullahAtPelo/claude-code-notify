@@ -5,7 +5,7 @@ install:
 
 update:
 	@git pull
-	@bash setup.sh
+	@UPDATING=1 bash setup.sh
 
 uninstall:
 	@bash uninstall.sh

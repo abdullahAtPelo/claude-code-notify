@@ -136,49 +136,51 @@ fi
 jb_tab=""
 case "$bundle" in
   com.jetbrains.*|com.google.android.studio)
-    for jb_port in $(seq 63342 63351); do
-      jb_tabs=$(curl -sf --connect-timeout 0.5 "http://127.0.0.1:$jb_port/api/claude/terminal/tabs" 2>/dev/null) && break
-      jb_port=""
+    # Walk the process tree to find our parent IDE process
+    _pid=$$
+    _shell_pid=""
+    _ide_pid=""
+    while true; do
+      _ppid=$(ps -o ppid= -p "$_pid" 2>/dev/null | tr -d ' ')
+      [ -z "$_ppid" ] || [ "$_ppid" = "0" ] || [ "$_ppid" = "1" ] && break
+      _ptty=$(ps -o tty= -p "$_ppid" 2>/dev/null | tr -d ' ')
+      if [ "$_ptty" = "??" ]; then
+        _shell_pid=$_pid
+        _ide_pid=$_ppid
+        break
+      fi
+      _pid=$_ppid
     done
-    if [ -n "$jb_tabs" ]; then
-      # Identify our terminal tab by walking the process tree.
-      # Our shell is the ancestor of this script whose parent has no TTY (the IDE process).
-      _pid=$$
-      _shell_pid=""
-      _ide_pid=""
-      while true; do
-        _ppid=$(ps -o ppid= -p "$_pid" 2>/dev/null | tr -d ' ')
-        [ -z "$_ppid" ] || [ "$_ppid" = "0" ] || [ "$_ppid" = "1" ] && break
-        _ptty=$(ps -o tty= -p "$_ppid" 2>/dev/null | tr -d ' ')
-        if [ "$_ptty" = "??" ]; then
-          _shell_pid=$_pid
-          _ide_pid=$_ppid
-          break
+
+    # Find which built-in server port belongs to our IDE process
+    if [ -n "$_ide_pid" ]; then
+      jb_port=$(lsof -anP -iTCP -sTCP:LISTEN -p "$_ide_pid" 2>/dev/null | awk '/127\.0\.0\.1:6334[2-9]|127\.0\.0\.1:6335[01]/ {sub(/.*:/,"",$9); print $9; exit}')
+      if [ -n "$jb_port" ]; then
+        jb_tabs=$(curl -sf --connect-timeout 0.5 "http://127.0.0.1:$jb_port/api/claude/terminal/tabs" 2>/dev/null)
+      fi
+    fi
+
+    if [ -n "$jb_tabs" ] && [ -n "$_shell_pid" ] && [ -n "$_ide_pid" ]; then
+      # Find all IDE child shells with TTYs (sorted by PID = creation order)
+      _all_ide_shells=$(ps -eo pid,ppid,tty 2>/dev/null | awk -v ide="$_ide_pid" '$2 == ide && $3 != "??" { print $1 }' | sort -n)
+
+      # Filter to shells whose CWD basename matches our project, find our index
+      _index=0
+      _found=false
+      for _spid in $_all_ide_shells; do
+        _scwd=$(lsof -a -d cwd -p "$_spid" -Fn 2>/dev/null | awk '/^n/{sub(/^n/,""); print; exit}')
+        _scwd_name=$(basename "$_scwd" 2>/dev/null)
+        if [ "$_scwd_name" = "$cwd" ]; then
+          if [ "$_spid" = "$_shell_pid" ]; then
+            _found=true
+            break
+          fi
+          _index=$((_index + 1))
         fi
-        _pid=$_ppid
       done
 
-      if [ -n "$_shell_pid" ] && [ -n "$_ide_pid" ]; then
-        # Find all IDE child shells with TTYs (sorted by PID = creation order)
-        _all_ide_shells=$(ps -eo pid,ppid,tty 2>/dev/null | awk -v ide="$_ide_pid" '$2 == ide && $3 != "??" { print $1 }' | sort -n)
-
-        # Filter to shells whose CWD basename matches our project, find our index
-        _index=0
-        _found=false
-        for _spid in $_all_ide_shells; do
-          _scwd=$(lsof -a -d cwd -p "$_spid" -Fn 2>/dev/null | awk '/^n/{sub(/^n/,""); print; exit}')
-          _scwd_name=$(basename "$_scwd" 2>/dev/null)
-          if [ "$_scwd_name" = "$cwd" ]; then
-            if [ "$_spid" = "$_shell_pid" ]; then
-              _found=true
-              break
-            fi
-            _index=$((_index + 1))
-          fi
-        done
-
-        if [ "$_found" = "true" ]; then
-          jb_tab=$(echo "$jb_tabs" | /usr/bin/python3 -c "
+      if [ "$_found" = "true" ]; then
+        jb_tab=$(echo "$jb_tabs" | /usr/bin/python3 -c "
 import sys, json
 cwd = sys.argv[1]
 index = int(sys.argv[2])
@@ -186,7 +188,6 @@ tabs = [t for t in json.load(sys.stdin) if t['project'] == cwd]
 if index < len(tabs):
     print(tabs[index]['tab'])
 " "$cwd" "$_index" 2>/dev/null)
-        fi
       fi
 
       # Fallback: selected tab
@@ -214,9 +215,7 @@ if [ -n "$jb_tab" ]; then
   activate_script=$(mktemp /tmp/notify-activate.XXXXXX)
   cat > "$activate_script" <<SCRIPT
 #!/bin/bash
-for p in \$(seq 63342 63351); do
-  curl -sf "http://127.0.0.1:\$p/api/claude/terminal/focus?project=$jb_url_project&tab=$jb_url_tab" >/dev/null 2>&1 && break
-done
+curl -sf "http://127.0.0.1:$jb_port/api/claude/terminal/focus?project=$jb_url_project&tab=$jb_url_tab" >/dev/null 2>&1
 rm -f "\$0"
 SCRIPT
   chmod +x "$activate_script"

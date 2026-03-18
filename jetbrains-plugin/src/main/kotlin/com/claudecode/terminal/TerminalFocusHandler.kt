@@ -138,30 +138,33 @@ class TerminalFocusHandler : HttpRequestHandler() {
                     ApplicationManager.getApplication().invokeLater {
                         val toolWindow = ToolWindowManager.getInstance(proj)
                             .getToolWindow("Terminal") ?: return@invokeLater
-                        val cm = toolWindow.contentManager
-                        val content = cm.contents.firstOrNull { it.displayName == targetTab }
-                            ?: return@invokeLater
 
-                        // Switch immediately
-                        cm.setSelectedContent(content, true)
+                        // Activate the Terminal panel first, then switch tabs in the callback
+                        toolWindow.activate {
+                            val cm = toolWindow.contentManager
+                            val content = cm.contents.firstOrNull { it.displayName == targetTab }
+                                ?: return@activate
 
-                        // Listen for selection changes to counter GoLand's state restoration
-                        val listener = object : ContentManagerListener {
-                            private var corrections = 0
-                            override fun selectionChanged(event: ContentManagerEvent) {
-                                if (event.content != content && corrections < 5) {
-                                    corrections++
-                                    cm.setSelectedContent(content, true)
+                            cm.setSelectedContent(content, true)
+
+                            // Listen for selection changes to counter GoLand's state restoration
+                            val listener = object : ContentManagerListener {
+                                private var corrections = 0
+                                override fun selectionChanged(event: ContentManagerEvent) {
+                                    if (event.content != content && corrections < 5) {
+                                        corrections++
+                                        cm.setSelectedContent(content, true)
+                                    }
                                 }
                             }
-                        }
-                        cm.addContentManagerListener(listener)
+                            cm.addContentManagerListener(listener)
 
-                        // Clean up listener after window activation settles
-                        ApplicationManager.getApplication().executeOnPooledThread {
-                            Thread.sleep(1000)
-                            ApplicationManager.getApplication().invokeLater {
-                                cm.removeContentManagerListener(listener)
+                            // Clean up listener after window activation settles
+                            ApplicationManager.getApplication().executeOnPooledThread {
+                                Thread.sleep(1000)
+                                ApplicationManager.getApplication().invokeLater {
+                                    cm.removeContentManagerListener(listener)
+                                }
                             }
                         }
                     }

@@ -3,6 +3,18 @@ set -e
 
 echo "==> Installing claude-code-notify"
 
+# Suggest make update if already installed
+if [ -f "$HOME/.claude/notify.sh" ] && [ "${UPDATING:-}" != "1" ]; then
+  echo ""
+  echo "It looks like claude-code-notify is already installed."
+  echo "To pull the latest changes and reinstall, run: make update"
+  echo ""
+  read -r -p "Continue with install anyway? [y/n] " answer
+  if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+    exit 0
+  fi
+fi
+
 # Install terminal-notifier if not present
 if ! command -v terminal-notifier &>/dev/null; then
   echo "==> Installing terminal-notifier via Homebrew..."
@@ -61,6 +73,18 @@ if os.path.exists(path):
 
 hooks = settings.setdefault('hooks', {})
 
+# Clean up old plugin/marketplace entries (migrating from plugin-based install)
+for key in list(settings.get('enabledPlugins', {}).keys()):
+    if 'claude-code-notify' in key:
+        del settings['enabledPlugins'][key]
+if not settings.get('enabledPlugins'):
+    settings.pop('enabledPlugins', None)
+for key in list(settings.get('extraKnownMarketplaces', {}).keys()):
+    if 'claude-code-notify' in key:
+        del settings['extraKnownMarketplaces'][key]
+if not settings.get('extraKnownMarketplaces'):
+    settings.pop('extraKnownMarketplaces', None)
+
 notify_cmd = 'bash ~/.claude/notify.sh'
 clear_cmd = 'bash ~/.claude/notify-clear.sh'
 
@@ -88,6 +112,29 @@ with open(path, 'w') as f:
     json.dump(settings, f, indent=2)
     f.write('\n')
 " && echo "==> Added hooks to $SETTINGS_FILE"
+
+# Clean up old plugin cache (migrating from plugin-based install)
+if [ -f "$HOME/.claude/plugins/known_marketplaces.json" ]; then
+  /usr/bin/python3 -c "
+import json, os, shutil
+path = os.path.expanduser('~/.claude/plugins/known_marketplaces.json')
+with open(path) as f:
+    data = json.load(f)
+changed = False
+for key in list(data.keys()):
+    if 'claude-code-notify' in key:
+        loc = data[key].get('installLocation', '')
+        if loc and os.path.isdir(loc):
+            shutil.rmtree(loc)
+        del data[key]
+        changed = True
+if changed:
+    with open(path, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
+" 2>/dev/null
+fi
+rm -rf "$HOME/.claude/plugins/cache/" 2>/dev/null
 
 # Install JetBrains terminal focus plugin if any JetBrains IDEs are detected
 JB_PLUGIN_ZIP="$SCRIPT_DIR/jetbrains-plugin/dist/claude-code-terminal-focus-1.0.0.zip"
@@ -131,9 +178,8 @@ echo "Done! Next steps:"
 echo "  1. Enable notifications for terminal-notifier in:"
 echo "     System Settings → Notifications → terminal-notifier"
 echo "  2. Set the alert style to 'Alerts' if you want notifications to persist"
-echo "  3. Restart Claude Code"
 if [ "$jb_installed" = "true" ]; then
-  echo "  4. Restart any open JetBrains IDEs to load the terminal focus plugin"
+  echo "  3. Restart any open JetBrains IDEs to load the terminal focus plugin"
 fi
 echo ""
-echo "To update later: cd $(basename "$SCRIPT_DIR") && git pull && make install"
+echo "To update later: cd $(basename "$SCRIPT_DIR") && git checkout main && make update"
