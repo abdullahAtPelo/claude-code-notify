@@ -87,6 +87,42 @@ The script:
 
 This focus detection works universally across standalone terminals (Ghostty, iTerm2, Terminal.app) and IDE-embedded terminals (JetBrains GoLand, IntelliJ, etc.) without any terminal-specific code.
 
+## Troubleshooting
+
+### Notifications go to history but never show as banners
+
+This is the most common issue on fresh installs. `terminal-notifier` exits 0 and the notification lands in Notification Center *history*, but no banner ever appears.
+
+**Cause:** macOS never created a TCC notification authorization record for terminal-notifier. The setup script now handles this automatically by registering the app with Launch Services and opening it directly. If you installed before this fix, re-run:
+
+```bash
+make install
+```
+
+**Manual fix** (if `make install` doesn't resolve it):
+
+```bash
+# Find the .app bundle
+APP="$(brew --prefix)/Cellar/terminal-notifier/$(brew list --versions terminal-notifier | awk '{print $2}')/terminal-notifier.app"
+
+# Re-register with Launch Services
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP"
+
+# Open the .app — this forces macOS to create the authorization record
+open "$APP"
+
+# Test
+terminal-notifier -title "test" -message "hello"
+```
+
+### Notifications suddenly stopped working (were working before)
+
+Check for an **active Focus mode** first — it produces the identical symptom (exit 0, notification in history, no banner). Focus mode silently routes all banners to history.
+
+### Notifications break after `brew upgrade terminal-notifier`
+
+The Homebrew Cellar path is versioned, so upgrading moves the `.app` and orphans the old TCC grant. Re-run `make install` to re-register at the new path.
+
 ## Requirements
 
 - macOS

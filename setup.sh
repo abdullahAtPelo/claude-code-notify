@@ -23,6 +23,31 @@ else
   echo "==> terminal-notifier already installed"
 fi
 
+# Register terminal-notifier.app with macOS notification system (TCC authorization)
+# On fresh installs, terminal-notifier may silently route to Notification Center history
+# instead of showing banners because macOS never created a TCC authorization record.
+# The fix: re-register with Launch Services and open the .app bundle directly.
+TN_VERSION=$(brew list --versions terminal-notifier 2>/dev/null | awk '{print $2}')
+TN_APP="$(brew --prefix)/Cellar/terminal-notifier/${TN_VERSION}/terminal-notifier.app"
+if [ -d "$TN_APP" ]; then
+  echo "==> Registering terminal-notifier with macOS notification system..."
+  # Re-register with Launch Services so macOS knows about this .app bundle
+  /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$TN_APP" 2>/dev/null
+  # Open the .app directly — this is what forces macOS to create the TCC notification
+  # authorization record. Without this step, notifications land in history silently.
+  open "$TN_APP" 2>/dev/null
+  # Brief pause to let the app register, then send a test notification
+  sleep 1
+  terminal-notifier -title "claude-code-notify" -message "Notifications enabled! You should see this as a banner." -group "setup-test" 2>/dev/null
+  echo "==> Sent test notification — if you see a banner, you're all set!"
+  echo "    If you did NOT see a banner:"
+  echo "    - Check for an active Focus mode (routes banners silently to history)"
+  echo "    - Verify: System Settings → Notifications → terminal-notifier → Style = Banners or Alerts"
+else
+  echo "==> Warning: Could not locate terminal-notifier.app at $TN_APP"
+  echo "    Notifications may not appear as banners. See README troubleshooting section."
+fi
+
 # Ensure .claude directory exists
 mkdir -p "$HOME/.claude"
 
@@ -175,9 +200,9 @@ fi
 
 echo ""
 echo "Done! Next steps:"
-echo "  1. Enable notifications for terminal-notifier in:"
-echo "     System Settings → Notifications → terminal-notifier"
-echo "  2. Set the alert style to 'Alerts' if you want notifications to persist"
+echo "  1. If you saw the test notification banner above, you're good!"
+echo "     Otherwise: System Settings → Notifications → terminal-notifier → enable"
+echo "  2. Set the alert style to 'Alerts' if you want notifications to persist until clicked"
 if [ "$jb_installed" = "true" ]; then
   echo "  3. Restart any open JetBrains IDEs to load the terminal focus plugin"
 fi
